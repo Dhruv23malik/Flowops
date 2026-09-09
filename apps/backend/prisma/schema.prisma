@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth Models ──────────────────────────────────────────────────
+
+model User {
+  id           String     @id @default(uuid())
+  name         String?
+  email        String     @unique
+  passwordHash String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  workflows    Workflow[]
+}
+
+// ─── Workflow Models ──────────────────────────────────────────────
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+}
+
+model Workflow {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  status      WorkflowStatus @default(DRAFT)
+  nodes       Json           @default("[]")
+  edges       Json           @default("[]")
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  versions    WorkflowVersion[]
+  executions  Execution[]
+
+  @@index([userId])
+}
+
+model WorkflowVersion {
+  id         String      @id @default(uuid())
+  workflowId String
+  workflow   Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  version    Int
+  graph      Json        // The DAG stored as structured JSON
+  createdAt  DateTime    @default(now())
+  executions Execution[]
+}
+
+model Execution {
+  id                String          @id @default(uuid())
+  workflowId        String
+  workflow          Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflowVersionId String
+  workflowVersion   WorkflowVersion @relation(fields: [workflowVersionId], references: [id])
+  status            ExecutionStatus @default(QUEUED)
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime        @default(now())
+  steps             ExecutionStep[]
+
+  @@index([workflowId])
+  @@index([createdAt])
+}
+
+enum ExecutionStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model ExecutionStep {
+  id          String             @id @default(uuid())
+  executionId String
+  execution   Execution          @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  nodeId      String             // ID of the node in the DAG
+  nodeType    String
+  status      StepStatus         @default(PENDING)
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+  input       Json?
+  output      Json?
+  retryCount  Int                @default(0)
+  logs        ExecutionLog[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([executionId])
+}
+
+enum StepStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  RETRYING
+}
+
+model ExecutionLog {
+  id              String        @id @default(uuid())
+  executionStepId String
+  executionStep   ExecutionStep @relation(fields: [executionStepId], references: [id], onDelete: Cascade)
+  level           String        // INFO, ERROR, WARN
+  message         String
+  timestamp       DateTime      @default(now())
+}
+
+// Tracks every LLM generation attempt for the "first-try valid %" metric
+model LlmGenerationLog {
+  id               String   @id @default(uuid())
+  workflowId       String?
+  userPrompt       String
+  rawLlmOutput     String
+  isValid          Boolean
+  validationErrors String?  // JSON string of Zod errors
+  retryNumber      Int      @default(0)
+  createdAt        DateTime @default(now())
+}
