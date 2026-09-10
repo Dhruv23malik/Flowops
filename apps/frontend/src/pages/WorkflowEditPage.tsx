@@ -1,6 +1,6 @@
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { apiGetWorkflow, apiUpdateWorkflow, WorkflowDetail, WorkflowStatus } from '../services/workflow.api';
+import { apiGetWorkflow, apiUpdateWorkflow, type WorkflowDetail, type WorkflowStatus } from '../services/workflow.api';
 import { ApiException } from '../services/auth.api';
 import '../App.css';
 

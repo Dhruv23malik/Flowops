@@ -13,10 +13,8 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes } from './nodes';
-import type { FlowNode, FlowEdge, FlowNodeData } from './types';
-import type { NodeType } from '../../services/workflow.api';
-import { generateNodeId, generateEdgeId, getDefaultConfig } from './utils/defaults';
-import { getNodeTypeInfo } from './types';
+import type { FlowNode, FlowEdge } from './types';
+import type { NodeType } from '../../../services/workflow.api';
 
 interface WorkflowCanvasProps {
   nodes: FlowNode[];

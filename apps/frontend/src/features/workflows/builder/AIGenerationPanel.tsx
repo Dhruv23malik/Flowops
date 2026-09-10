@@ -33,7 +33,7 @@ export function AIGenerationPanel({ workflowId, isOpen, onClose, onApply }: AIGe
       setPreview(generated);
     } catch (err) {
       if (err instanceof ApiException) {
-        setError(err.message);
+        setError((err as Error).message);
       } else {
         setError('FlowOps couldn\'t generate a valid workflow. Please try again or simplify your request.');
       }
@@ -79,7 +79,7 @@ export function AIGenerationPanel({ workflowId, isOpen, onClose, onApply }: AIGe
                   <div key={node.id} className="ai-preview__node-wrapper">
                     <div className="ai-preview__node">
                       <span className="ai-preview__node-type">{node.type.replace('_', ' ')}</span>
-                      {node.type === 'ai_analyze' && node.config.outputKey && (
+                      {node.type === 'ai_analyze' && !!node.config.outputKey && (
                         <div className="ai-preview__node-detail">→ {String(node.config.outputKey)}</div>
                       )}
                     </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { executionApi, type Execution } from '../../services/execution.api';
+import { executionApi, type Execution } from '../services/execution.api';
 import '../App.css';
 
 export function ExecutionsPage() {

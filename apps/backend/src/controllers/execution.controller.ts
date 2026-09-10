@@ -34,7 +34,7 @@ export async function runWorkflow(req: AuthRequest, res: Response, next: NextFun
     const graph = latestVersion.graph as unknown as WorkflowGraph;
 
     // The executor validates the graph, runs it, and saves state
-    const execution = await executor.run(workflow.id, latestVersion.id, graph);
+    const execution = await executor.run(workflow.id, latestVersion.id, graph, req.user!.userId);
 
     res.status(200).json({
       success: true,

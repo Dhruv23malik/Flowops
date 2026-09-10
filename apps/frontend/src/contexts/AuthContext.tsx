@@ -3,10 +3,11 @@ import {
   useContext,
   useEffect,
   useState,
-  ReactNode,
+  type ReactNode,
   useCallback,
 } from 'react';
-import { apiGetMe, apiLogin, apiLogout, apiRegister, User } from '../services/auth.api';
+import { apiGetMe, apiLogin, apiLogout, apiRegister, type User } from '../services/auth.api';
+import { socketService } from '../services/socket';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -38,10 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(({ user }) => {
         setUser(user);
         setStatus('authenticated');
+        socketService.connect();
       })
       .catch(() => {
         setUser(null);
         setStatus('unauthenticated');
+        socketService.disconnect();
       });
   }, []);
 
@@ -49,12 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { user } = await apiLogin(email, password);
     setUser(user);
     setStatus('authenticated');
+    socketService.connect();
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
     const { user } = await apiRegister(name, email, password);
     setUser(user);
     setStatus('authenticated');
+    socketService.connect();
   }, []);
 
   const logout = useCallback(async () => {
@@ -65,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(null);
     setStatus('unauthenticated');
+    socketService.disconnect();
   }, []);
 
   return (

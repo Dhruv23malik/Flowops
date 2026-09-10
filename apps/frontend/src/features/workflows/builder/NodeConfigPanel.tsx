@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { FlowNode, FlowNodeData } from './types';
 import { getNodeTypeInfo } from './types';
-import type { NodeType } from '../../services/workflow.api';
+import type { NodeType } from '../../../services/workflow.api';
 
 interface NodeConfigPanelProps {
   node: FlowNode | null;

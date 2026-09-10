@@ -6,6 +6,8 @@ import {
   useEdgesState,
   addEdge,
   type Connection,
+  type OnNodesChange,
+  type OnEdgesChange,
 } from '@xyflow/react';
 
 import {
@@ -14,8 +16,8 @@ import {
   type WorkflowDetail,
   type NodeType,
   type WorkflowStatus,
-} from '../../services/workflow.api';
-import { ApiException } from '../../services/auth.api';
+} from '../../../services/workflow.api';
+import { ApiException } from '../../../services/auth.api';
 import {
   apiNodesToFlowNodes,
   apiEdgesToFlowEdges,
@@ -23,6 +25,7 @@ import {
   flowEdgesToApiEdges,
   getNodeTypeInfo,
   type FlowNode,
+  type FlowEdge,
   type FlowNodeData,
 } from './types';
 import { generateNodeId, generateEdgeId, getDefaultConfig, getDefaultPosition } from './utils/defaults';
@@ -33,9 +36,24 @@ import { NodePalette } from './NodePalette';
 import { NodeConfigPanel } from './NodeConfigPanel';
 import { WorkflowCanvas } from './WorkflowCanvas';
 import { AIGenerationPanel } from './AIGenerationPanel';
-import type { GeneratedWorkflow } from '../../services/ai.api';
-import { executionApi, type Execution } from '../../services/execution.api';
+import type { GeneratedWorkflow } from '../../../services/ai.api';
+import { executionApi, type Execution } from '../../../services/execution.api';
 import { ExecutionResultModal } from './ExecutionResultModal';
+import { socketService } from '../../../services/socket';
+import type { ExecutionStatus, StepStatus } from '@flowops/schemas';
+
+type LiveExecutionState = {
+  executionId: string;
+  workflowId: string;
+  status: ExecutionStatus;
+  steps: Record<string, {
+    id: string;
+    nodeId: string;
+    nodeType: string;
+    status: StepStatus;
+    duration?: number;
+  }>;
+};
 
 import '../../../App.css';
 
@@ -54,7 +72,7 @@ function WorkflowBuilderInner() {
 
   // ─── React Flow State ──────────────────────────────────────────
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
 
   // ─── UI State ──────────────────────────────────────────────────
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -66,6 +84,7 @@ function WorkflowBuilderInner() {
   const [isRunning, setIsRunning] = useState(false);
   const [lastExecution, setLastExecution] = useState<Execution | null>(null);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [liveExecution, setLiveExecution] = useState<LiveExecutionState | null>(null);
 
   // ─── Derived ───────────────────────────────────────────────────
   const selectedNode = useMemo(
@@ -286,10 +305,61 @@ function WorkflowBuilderInner() {
     markDirty();
   }, [nodes.length, setNodes, setEdges, markDirty]);
 
+  // ─── Socket.IO Real-Time Events ────────────────────────────────
+  useEffect(() => {
+    if (!id) return;
+
+    socketService.on('execution:started', (data: any) => {
+      if (data.workflowId === id) {
+        setLiveExecution({
+          executionId: data.executionId,
+          workflowId: data.workflowId,
+          status: data.status,
+          steps: {}
+        });
+      }
+    });
+
+    const updateStep = (data: any) => {
+      setLiveExecution(prev => prev && prev.executionId === data.executionId ? {
+        ...prev,
+        steps: { ...prev.steps, [data.step.nodeId]: data.step }
+      } : prev);
+    };
+
+    socketService.on('execution:step_started', updateStep);
+    socketService.on('execution:step_completed', updateStep);
+    socketService.on('execution:step_failed', updateStep);
+
+    socketService.on('execution:completed', (data: any) => {
+      setLiveExecution(prev => prev && prev.executionId === data.executionId ? {
+        ...prev,
+        status: data.status
+      } : prev);
+    });
+
+    socketService.on('execution:failed', (data: any) => {
+      setLiveExecution(prev => prev && prev.executionId === data.executionId ? {
+        ...prev,
+        status: data.status
+      } : prev);
+    });
+
+    return () => {
+      socketService.off('execution:started');
+      socketService.off('execution:step_started');
+      socketService.off('execution:step_completed');
+      socketService.off('execution:step_failed');
+      socketService.off('execution:completed');
+      socketService.off('execution:failed');
+    };
+  }, [id]);
+
   // ─── Run Workflow ──────────────────────────────────────────────
   const handleRunWorkflow = useCallback(async () => {
     if (!id || isRunning || isDirty || workflowStatus === 'DRAFT') return;
     setIsRunning(true);
+    setLiveExecution(null); // Clear previous visual state
     try {
       const res = await executionApi.runWorkflow(id);
       setLastExecution(res.execution);
@@ -382,10 +452,16 @@ function WorkflowBuilderInner() {
         <NodePalette onAddNode={handleAddNode} hasTrigger={hasTrigger} />
 
         <WorkflowCanvas
-          nodes={nodes as FlowNode[]}
+          nodes={nodes.map((n: FlowNode) => ({
+            ...n,
+            data: {
+              ...n.data,
+              executionStatus: liveExecution?.steps[n.id]?.status,
+            }
+          }))}
           edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={handleEdgesChange}
+          onNodesChange={handleNodesChange as OnNodesChange}
+          onEdgesChange={handleEdgesChange as OnEdgesChange}
           onConnect={handleConnect}
           onNodeClick={handleNodeClick}
           onPaneClick={handlePaneClick}
@@ -399,6 +475,35 @@ function WorkflowBuilderInner() {
           onDeleteNode={handleDeleteNode}
           onClose={() => setSelectedNodeId(null)}
         />
+        
+        {liveExecution && (
+          <div className="execution-panel">
+            <div className="execution-panel-header">
+              <h3>Execution #{liveExecution.executionId.slice(-4)}</h3>
+              <span className={`status-text ${liveExecution.status.toLowerCase()}`}>{liveExecution.status}</span>
+            </div>
+            <div className="execution-panel-steps">
+              {nodes.map(node => {
+                const step = liveExecution.steps[node.id];
+                if (!step) return (
+                   <div key={node.id} className="execution-step pending">
+                     ○ {(node.data as any).label}
+                   </div>
+                );
+                return (
+                   <div key={node.id} className={`execution-step ${step.status.toLowerCase()}`}>
+                     {step.status === 'SUCCESS' && '✓ '}
+                     {step.status === 'RUNNING' && '⟳ '}
+                     {step.status === 'FAILED' && '✕ '}
+                     {step.status === 'SKIPPED' && '○ '}
+                     {(node.data as any).label}
+                     {step.duration !== undefined && <span className="duration">{step.duration}ms</span>}
+                   </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <AIGenerationPanel

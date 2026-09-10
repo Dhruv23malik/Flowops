@@ -81,7 +81,7 @@ describe('WorkflowExecutor', () => {
   });
 
   const runMockGraph = async (graph: WorkflowGraph) => {
-    return executor.run('wf-1', 'wv-1', graph);
+    return executor.run('wf-1', 'wv-1', graph, 'test-user-id');
   };
 
   it('executes a linear workflow successfully', async () => {

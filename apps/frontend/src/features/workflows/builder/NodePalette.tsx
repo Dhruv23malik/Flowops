@@ -1,5 +1,5 @@
 import { NODE_TYPE_INFO } from './types';
-import type { NodeType } from '../../services/workflow.api';
+import type { NodeType } from '../../../services/workflow.api';
 
 interface NodePaletteProps {
   onAddNode: (type: NodeType) => void;

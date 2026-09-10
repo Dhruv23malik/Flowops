@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { WorkflowNode, WorkflowEdge, NodeType } from '../../services/workflow.api';
+import type { WorkflowNode, WorkflowEdge, NodeType } from '../../../services/workflow.api';
 
 // ─── Node Data Types ──────────────────────────────────────────────
 
@@ -32,6 +32,7 @@ export interface FlowNodeData extends Record<string, unknown> {
   nodeType: NodeType;
   config: Record<string, unknown>;
   label: string;
+  executionStatus?: string;
 }
 
 // ─── Type alias for React Flow ─────────────────────────────────

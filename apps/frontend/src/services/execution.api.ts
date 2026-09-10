@@ -1,11 +1,11 @@
-import { fetchWithAuth } from './auth.api';
+import { apiRequest } from './auth.api';
 
 export interface ExecutionStep {
   id: string;
   executionId: string;
   nodeId: string;
   nodeType: string;
-  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'RETRYING';
+  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'RETRYING' | 'SKIPPED';
   startedAt: string | null;
   completedAt: string | null;
   error: string | null;
@@ -27,19 +27,19 @@ export interface Execution {
 
 export const executionApi = {
   async runWorkflow(workflowId: string): Promise<{ execution: Execution }> {
-    return fetchWithAuth<{ execution: Execution }>(`/api/workflows/${workflowId}/run`, {
+    return apiRequest<{ execution: Execution }>(`/api/workflows/${workflowId}/run`, {
       method: 'POST',
     });
   },
 
   async listExecutions(): Promise<{ executions: Execution[] }> {
-    return fetchWithAuth<{ executions: Execution[] }>('/api/executions', {
+    return apiRequest<{ executions: Execution[] }>('/api/executions', {
       method: 'GET',
     });
   },
 
   async getExecution(id: string): Promise<{ execution: Execution }> {
-    return fetchWithAuth<{ execution: Execution }>(`/api/executions/${id}`, {
+    return apiRequest<{ execution: Execution }>(`/api/executions/${id}`, {
       method: 'GET',
     });
   },

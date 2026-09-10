@@ -1,4 +1,4 @@
-import type { NodeType } from '../../../services/workflow.api';
+import type { NodeType } from '../../../../services/workflow.api';
 
 /**
  * Generate a unique node ID.

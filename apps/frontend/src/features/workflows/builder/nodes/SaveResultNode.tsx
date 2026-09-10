@@ -6,9 +6,10 @@ export function SaveResultNode({ data, selected }: NodeProps) {
   const nodeData = data as unknown as FlowNodeData;
   const config = nodeData.config as { resultKey?: string };
   const resultKey = config.resultKey || 'result';
+  const statusClass = nodeData.executionStatus ? ` flow-node--${nodeData.executionStatus.toLowerCase()}` : '';
 
   return (
-    <div className={`flow-node flow-node--save${selected ? ' flow-node--selected' : ''}`}>
+    <div className={`flow-node flow-node--save${selected ? ' flow-node--selected' : ''}${statusClass}`}>
       <Handle
         type="target"
         position={Position.Top}

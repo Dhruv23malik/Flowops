@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { apiGetWorkflow, apiDeleteWorkflow, WorkflowDetail } from '../services/workflow.api';
+import { apiGetWorkflow, apiDeleteWorkflow, type WorkflowDetail } from '../services/workflow.api';
 import { ApiException } from '../services/auth.api';
 import '../App.css';
 

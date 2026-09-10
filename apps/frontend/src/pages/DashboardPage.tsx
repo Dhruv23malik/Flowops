@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { apiListWorkflows, WorkflowListItem } from '../services/workflow.api';
+import { apiListWorkflows, type WorkflowListItem } from '../services/workflow.api';
 import '../App.css';
 
 function getGreeting() {

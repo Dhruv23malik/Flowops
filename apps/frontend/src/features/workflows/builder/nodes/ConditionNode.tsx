@@ -9,9 +9,10 @@ export function ConditionNode({ data, selected }: NodeProps) {
     config.field && config.operator
       ? `${config.field} ${config.operator} ${config.value ?? ''}`
       : 'Not configured';
+  const statusClass = nodeData.executionStatus ? ` flow-node--${nodeData.executionStatus.toLowerCase()}` : '';
 
   return (
-    <div className={`flow-node flow-node--condition${selected ? ' flow-node--selected' : ''}`}>
+    <div className={`flow-node flow-node--condition${selected ? ' flow-node--selected' : ''}${statusClass}`}>
       <Handle
         type="target"
         position={Position.Top}

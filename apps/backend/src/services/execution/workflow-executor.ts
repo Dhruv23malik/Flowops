@@ -1,11 +1,12 @@
 import db from '../../db';
-import { WorkflowGraph, validateWorkflowGraph, WorkflowNode, WorkflowEdge } from '@flowops/schemas';
+import { WorkflowGraph, validateWorkflowGraph, WorkflowNode, WorkflowEdge, StepStatus } from '@flowops/schemas';
 import { ExecutionContext, NodeExecutionResult } from './execution.types';
 import { NodeExecutor } from './node-executor';
 import { ManualTriggerExecutor } from './node-executors/manual-trigger.executor';
 import { AiAnalyzeExecutor } from './node-executors/ai-analyze.executor';
 import { ConditionExecutor } from './node-executors/condition.executor';
 import { SaveResultExecutor } from './node-executors/save-result.executor';
+import { getIo } from '../socket';
 
 export class WorkflowExecutor {
   private executors: Record<string, NodeExecutor>;
@@ -19,7 +20,7 @@ export class WorkflowExecutor {
     };
   }
 
-  async run(workflowId: string, versionId: string, graph: WorkflowGraph) {
+  async run(workflowId: string, versionId: string, graph: WorkflowGraph, userId: string) {
     // 1. Validate workflow
     const validation = validateWorkflowGraph(graph);
     if (!validation.success) {
@@ -35,6 +36,16 @@ export class WorkflowExecutor {
         startedAt: new Date(),
       },
     });
+
+    try {
+      getIo().to(`user:${userId}`).emit('execution:started', {
+        executionId: execution.id,
+        workflowId,
+        status: 'RUNNING'
+      });
+    } catch (err) {
+      console.warn('Could not emit execution:started', err);
+    }
 
     try {
       const context: ExecutionContext = {
@@ -59,6 +70,20 @@ export class WorkflowExecutor {
           },
         });
 
+        try {
+          getIo().to(`user:${userId}`).emit('execution:step_started', {
+            executionId: execution.id,
+            step: {
+              id: step.id,
+              nodeId: currentNode.id,
+              nodeType: currentNode.type,
+              status: 'RUNNING'
+            }
+          });
+        } catch (err) {
+          console.warn('Could not emit execution:step_started', err);
+        }
+
         const executor = this.executors[currentNode.type];
         if (!executor) {
           throw new Error(`Unsupported node type: ${currentNode.type}`);
@@ -77,6 +102,34 @@ export class WorkflowExecutor {
             error: result.error,
           },
         });
+
+        try {
+          if (result.status === 'FAILED') {
+            getIo().to(`user:${userId}`).emit('execution:step_failed', {
+              executionId: execution.id,
+              step: {
+                id: step.id,
+                nodeId: currentNode.id,
+                nodeType: currentNode.type,
+                status: 'FAILED',
+                error: result.error ? { message: result.error } : undefined
+              }
+            });
+          } else {
+            getIo().to(`user:${userId}`).emit('execution:step_completed', {
+              executionId: execution.id,
+              step: {
+                id: step.id,
+                nodeId: currentNode.id,
+                nodeType: currentNode.type,
+                status: result.status as "SUCCESS" | "SKIPPED",
+                duration: Date.now() - step.startedAt!.getTime()
+              }
+            });
+          }
+        } catch (err) {
+          console.warn('Could not emit step completion event', err);
+        }
 
         if (result.status === 'FAILED') {
           throw new Error(result.error || `Node ${currentNode.id} failed`);
@@ -100,6 +153,16 @@ export class WorkflowExecutor {
         },
       });
 
+      try {
+        getIo().to(`user:${userId}`).emit('execution:completed', {
+          executionId: execution.id,
+          workflowId,
+          status: 'SUCCESS'
+        });
+      } catch (err) {
+        console.warn('Could not emit execution:completed', err);
+      }
+
       return await db.execution.findUnique({
         where: { id: execution.id },
         include: { steps: { orderBy: { createdAt: 'asc' } } }
@@ -114,6 +177,16 @@ export class WorkflowExecutor {
           completedAt: new Date(),
         },
       });
+
+      try {
+        getIo().to(`user:${userId}`).emit('execution:failed', {
+          executionId: execution.id,
+          workflowId,
+          status: 'FAILED'
+        });
+      } catch (err) {
+        console.warn('Could not emit execution:failed', err);
+      }
 
       return await db.execution.findUnique({
         where: { id: execution.id },

@@ -11,9 +11,10 @@ export function AiAnalyzeNode({ data, selected }: NodeProps) {
       : config.prompt
     : 'No prompt set';
   const outputKey = config.outputKey || 'result';
+  const statusClass = nodeData.executionStatus ? ` flow-node--${nodeData.executionStatus.toLowerCase()}` : '';
 
   return (
-    <div className={`flow-node flow-node--ai${selected ? ' flow-node--selected' : ''}`}>
+    <div className={`flow-node flow-node--ai${selected ? ' flow-node--selected' : ''}${statusClass}`}>
       <Handle
         type="target"
         position={Position.Top}

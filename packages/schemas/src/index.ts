@@ -152,7 +152,7 @@ export function validateWorkflowGraph(
 export const ExecutionStatusSchema = z.enum(["QUEUED", "RUNNING", "SUCCESS", "FAILED"]);
 export type ExecutionStatus = z.infer<typeof ExecutionStatusSchema>;
 
-export const StepStatusSchema = z.enum(["PENDING", "RUNNING", "SUCCESS", "FAILED"]);
+export const StepStatusSchema = z.enum(["PENDING", "RUNNING", "SUCCESS", "FAILED", "SKIPPED", "RETRYING"]);
 export type StepStatus = z.infer<typeof StepStatusSchema>;
 
 // ─── AI Debugger Response ───────────────────────────────────────
@@ -225,3 +225,56 @@ export const GenerateWorkflowRequestSchema = z.object({
   workflowId: z.string().optional(),
 });
 export type GenerateWorkflowRequest = z.infer<typeof GenerateWorkflowRequestSchema>;
+
+// ─── Socket Event Types ─────────────────────────────────────────
+
+export interface ExecutionStartedEvent {
+  executionId: string;
+  workflowId: string;
+  status: ExecutionStatus;
+}
+
+export interface ExecutionStepStartedEvent {
+  executionId: string;
+  step: {
+    id: string;
+    nodeId: string;
+    nodeType: string;
+    status: StepStatus;
+  };
+}
+
+export interface ExecutionStepCompletedEvent {
+  executionId: string;
+  step: {
+    id: string;
+    nodeId: string;
+    nodeType: string;
+    status: "SUCCESS" | "SKIPPED";
+    duration?: number;
+  };
+}
+
+export interface ExecutionStepFailedEvent {
+  executionId: string;
+  step: {
+    id: string;
+    nodeId: string;
+    nodeType: string;
+    status: "FAILED";
+    error: any;
+  };
+}
+
+export interface ExecutionCompletedEvent {
+  executionId: string;
+  workflowId: string;
+  status: "SUCCESS";
+}
+
+export interface ExecutionFailedEvent {
+  executionId: string;
+  workflowId: string;
+  status: "FAILED";
+}
+
