@@ -39,6 +39,7 @@ import { AIGenerationPanel } from './AIGenerationPanel';
 import type { GeneratedWorkflow } from '../../../services/ai.api';
 import { executionApi, type Execution } from '../../../services/execution.api';
 import { ExecutionResultModal } from './ExecutionResultModal';
+import { AIDebuggerPanel } from '../../../components/AIDebuggerPanel';
 import { socketService } from '../../../services/socket';
 import type { ExecutionStatus, StepStatus } from '@flowops/schemas';
 
@@ -81,6 +82,7 @@ function WorkflowBuilderInner() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
+  const [isDebuggerOpen, setIsDebuggerOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [lastExecution, setLastExecution] = useState<Execution | null>(null);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -517,7 +519,30 @@ function WorkflowBuilderInner() {
         isOpen={isResultModalOpen}
         onClose={() => setIsResultModalOpen(false)}
         execution={lastExecution}
+        onAskFlowOps={() => {
+          setIsResultModalOpen(false);
+          setIsDebuggerOpen(true);
+        }}
       />
+
+      {isDebuggerOpen && lastExecution && (
+        <AIDebuggerPanel
+          executionId={lastExecution.id}
+          onClose={() => setIsDebuggerOpen(false)}
+          onApplyFix={(fix) => {
+            if (fix.type === 'update_node_config') {
+              const node = nodes.find(n => n.id === fix.nodeId);
+              if (node) {
+                // Merge current config with AI suggested changes
+                const newConfig = { ...((node.data as any).config || {}), ...fix.changes };
+                handleUpdateConfig(fix.nodeId, newConfig);
+                setIsDebuggerOpen(false);
+                // Notification or just close is fine
+              }
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

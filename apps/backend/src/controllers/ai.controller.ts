@@ -48,3 +48,51 @@ export async function generateWorkflow(
     next(err);
   }
 }
+
+import { WorkflowDebugger } from '../services/workflow-debugger';
+import { AiDebugExecutionRequestSchema } from '@flowops/schemas';
+
+const debuggerService = new WorkflowDebugger();
+
+export async function debugExecution(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const parsed = AiDebugExecutionRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: parsed.error.errors[0]?.message ?? 'Invalid input',
+        },
+      });
+      return;
+    }
+
+    const { executionId } = parsed.data;
+    const userId = req.user!.id;
+
+    const result = await debuggerService.debugExecution(executionId, userId);
+
+    if (!result.success || !result.diagnosis) {
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'AI_DEBUGGER_FAILED',
+          message: result.error || 'Unable to diagnose the execution.',
+        },
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: result.diagnosis,
+    });
+  } catch (err) {
+    next(err);
+  }
+}

@@ -2,6 +2,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WorkflowExecutor } from '../services/execution/workflow-executor';
 import { WorkflowGraph } from '@flowops/schemas';
 
+// ─── Mock Socket ────────────────────────────────────────────────────
+const { mockEmit, mockTo } = vi.hoisted(() => {
+  const mockEmit = vi.fn();
+  return {
+    mockEmit,
+    mockTo: vi.fn().mockReturnValue({ emit: mockEmit }),
+  };
+});
+
+vi.mock('../services/socket', () => ({
+  getIo: vi.fn().mockReturnValue({
+    to: mockTo,
+  }),
+}));
+
 // ─── Mock DB ────────────────────────────────────────────────────────
 vi.mock('../db', () => ({
   default: {
@@ -80,6 +95,11 @@ describe('WorkflowExecutor', () => {
     });
   });
 
+  afterEach(() => {
+    mockEmit.mockClear();
+    mockTo.mockClear();
+  });
+
   const runMockGraph = async (graph: WorkflowGraph) => {
     return executor.run('wf-1', 'wv-1', graph, 'test-user-id');
   };
@@ -100,6 +120,19 @@ describe('WorkflowExecutor', () => {
     expect(execution?.steps.length).toBe(2);
     expect(execution?.steps[0].nodeType).toBe('manual_trigger');
     expect(execution?.steps[1].nodeType).toBe('save_result');
+
+    // Verify Socket.IO events
+    expect(mockTo).toHaveBeenCalledWith('user:test-user-id');
+    expect(mockEmit).toHaveBeenCalledWith('execution:started', expect.objectContaining({
+      executionId: 'exec-mock',
+      status: 'RUNNING'
+    }));
+    expect(mockEmit).toHaveBeenCalledWith('execution:step_started', expect.anything());
+    expect(mockEmit).toHaveBeenCalledWith('execution:step_completed', expect.anything());
+    expect(mockEmit).toHaveBeenCalledWith('execution:completed', expect.objectContaining({
+      executionId: 'exec-mock',
+      status: 'SUCCESS'
+    }));
   });
 
   it('stops execution on node failure', async () => {
@@ -121,6 +154,16 @@ describe('WorkflowExecutor', () => {
     expect(execution?.status).toBe('FAILED');
     expect(execution?.steps.length).toBe(2); // trigger + failed AI node
     expect(execution?.steps[1].status).toBe('FAILED');
+
+    // Verify failure events
+    expect(mockEmit).toHaveBeenCalledWith('execution:step_failed', expect.objectContaining({
+      executionId: 'exec-mock',
+      step: expect.objectContaining({ status: 'FAILED' })
+    }));
+    expect(mockEmit).toHaveBeenCalledWith('execution:failed', expect.objectContaining({
+      executionId: 'exec-mock',
+      status: 'FAILED'
+    }));
   });
 
   it('follows the TRUE branch of a condition', async () => {

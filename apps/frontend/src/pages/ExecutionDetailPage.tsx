@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { executionApi, type Execution } from '../services/execution.api';
+import { AIDebuggerPanel } from '../components/AIDebuggerPanel';
 import '../App.css';
 
 export function ExecutionDetailPage() {
@@ -36,12 +37,15 @@ export function ExecutionDetailPage() {
     );
   }
 
+  const [isDebuggerOpen, setIsDebuggerOpen] = useState(false);
+
   const duration = formatDuration(execution.startedAt, execution.completedAt);
   const isSuccess = execution.status === 'SUCCESS';
+  const isFailed = execution.status === 'FAILED';
 
   return (
     <>
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <Link to="/app/executions" style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', fontSize: '0.9rem', marginBottom: 8 }}>
             ← Back to Executions
@@ -49,6 +53,24 @@ export function ExecutionDetailPage() {
           <h1 className="page-title">Execution #{execution.id.substring(0, 8)}</h1>
           <p className="page-subtitle">Workflow: {execution.workflow?.name}</p>
         </div>
+        
+        {isFailed && (
+          <button 
+            className="btn" 
+            style={{ 
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              color: 'white',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: '0 4px 12px rgba(99,102,241,0.3)'
+            }}
+            onClick={() => setIsDebuggerOpen(true)}
+          >
+            <span>✦</span> Ask FlowOps
+          </button>
+        )}
       </div>
 
       <div className="page-body">
@@ -119,6 +141,13 @@ export function ExecutionDetailPage() {
           )}
         </div>
       </div>
+      
+      {isDebuggerOpen && (
+        <AIDebuggerPanel 
+          executionId={execution.id} 
+          onClose={() => setIsDebuggerOpen(false)} 
+        />
+      )}
     </>
   );
 }

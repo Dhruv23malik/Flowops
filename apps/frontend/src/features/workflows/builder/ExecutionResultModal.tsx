@@ -4,9 +4,10 @@ interface ExecutionResultModalProps {
   isOpen: boolean;
   onClose: () => void;
   execution: Execution | null;
+  onAskFlowOps?: () => void;
 }
 
-export function ExecutionResultModal({ isOpen, onClose, execution }: ExecutionResultModalProps) {
+export function ExecutionResultModal({ isOpen, onClose, execution, onAskFlowOps }: ExecutionResultModalProps) {
   if (!isOpen || !execution) return null;
 
   const isSuccess = execution.status === 'SUCCESS';
@@ -47,10 +48,22 @@ export function ExecutionResultModal({ isOpen, onClose, execution }: ExecutionRe
             </div>
           )}
 
-          <div className="ai-modal__actions" style={{ justifyContent: 'center' }}>
-            <button className="btn btn-primary" onClick={onClose}>
+          <div className="ai-modal__actions" style={{ justifyContent: 'center', gap: 12 }}>
+            <button className="btn btn-secondary" onClick={onClose}>
               Close
             </button>
+            {!isSuccess && onAskFlowOps && (
+              <button 
+                className="btn btn-primary" 
+                onClick={onAskFlowOps}
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  border: 'none',
+                }}
+              >
+                <span>✦</span> Ask FlowOps
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -20,6 +20,7 @@ import { WorkflowEditPage } from './pages/WorkflowEditPage';
 import { SettingsPage } from './pages/PlaceholderPages';
 import { ExecutionsPage } from './pages/ExecutionsPage';
 import { ExecutionDetailPage } from './pages/ExecutionDetailPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 
 function App() {
   return (
@@ -50,7 +51,7 @@ function App() {
       <Route path="/" element={<Navigate to="/app/workflows" replace />} />
 
       {/* 404 fallback */}
-      <Route path="*" element={<Navigate to="/app/workflows" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

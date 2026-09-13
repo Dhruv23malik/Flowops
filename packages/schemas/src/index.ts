@@ -157,12 +157,29 @@ export type StepStatus = z.infer<typeof StepStatusSchema>;
 
 // ─── AI Debugger Response ───────────────────────────────────────
 
+export const AiDebuggerFixSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("update_node_config"),
+    nodeId: z.string().min(1),
+    changes: z.record(z.any()),
+  }),
+  z.object({
+    type: z.literal("no_safe_fix"),
+  }),
+]);
+export type AiDebuggerFix = z.infer<typeof AiDebuggerFixSchema>;
+
 export const AiDebugResponseSchema = z.object({
   diagnosis: z.string().min(1),
   probableCause: z.string().min(1),
-  suggestedFix: z.string().min(1),
+  suggestedFix: AiDebuggerFixSchema,
 });
 export type AiDebugResponse = z.infer<typeof AiDebugResponseSchema>;
+
+export const AiDebugExecutionRequestSchema = z.object({
+  executionId: z.string().min(1),
+});
+export type AiDebugExecutionRequest = z.infer<typeof AiDebugExecutionRequestSchema>;
 
 // ─── Workflow Status ────────────────────────────────────────────
 
