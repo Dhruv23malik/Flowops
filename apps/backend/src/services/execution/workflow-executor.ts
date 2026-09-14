@@ -6,6 +6,7 @@ import { ManualTriggerExecutor } from './node-executors/manual-trigger.executor'
 import { AiAnalyzeExecutor } from './node-executors/ai-analyze.executor';
 import { ConditionExecutor } from './node-executors/condition.executor';
 import { SaveResultExecutor } from './node-executors/save-result.executor';
+import { HttpRequestExecutor } from './node-executors/http-request.executor';
 import { getIo } from '../socket';
 
 export class WorkflowExecutor {
@@ -17,6 +18,7 @@ export class WorkflowExecutor {
       ai_analyze: new AiAnalyzeExecutor(aiLlmClient),
       condition: new ConditionExecutor(),
       save_result: new SaveResultExecutor(),
+      http_request: new HttpRequestExecutor(),
     };
   }
 

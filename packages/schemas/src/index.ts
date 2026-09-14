@@ -7,6 +7,7 @@ export const NodeType = z.enum([
   "ai_analyze",
   "condition",
   "save_result",
+  "http_request",
 ]);
 export type NodeType = z.infer<typeof NodeType>;
 
@@ -29,12 +30,21 @@ export const SaveResultConfigSchema = z.object({
   resultKey: z.string().min(1, "Result key is required"),
 });
 
+export const HttpRequestConfigSchema = z.object({
+  url: z.string().url("Must be a valid URL"),
+  method: z.enum(["GET", "POST", "PUT", "DELETE"]).default("GET"),
+  headers: z.string().optional(), // JSON string
+  body: z.string().optional(), // JSON string
+  outputKey: z.string().optional(),
+});
+
 // Discriminated union mapping type → config
 export const NodeConfigSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("manual_trigger"), config: ManualTriggerConfigSchema }),
   z.object({ type: z.literal("ai_analyze"), config: AiAnalyzeConfigSchema }),
   z.object({ type: z.literal("condition"), config: ConditionConfigSchema }),
   z.object({ type: z.literal("save_result"), config: SaveResultConfigSchema }),
+  z.object({ type: z.literal("http_request"), config: HttpRequestConfigSchema }),
 ]);
 
 // ─── Workflow Node ──────────────────────────────────────────────

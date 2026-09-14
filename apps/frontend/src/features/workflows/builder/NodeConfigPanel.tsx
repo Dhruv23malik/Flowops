@@ -100,6 +100,14 @@ function ConfigForm({ nodeId, nodeType, config, onUpdateConfig }: ConfigFormProp
           onUpdateConfig={onUpdateConfig}
         />
       );
+    case 'http_request':
+      return (
+        <HttpRequestForm
+          nodeId={nodeId}
+          config={config as { url?: string; method?: string; headers?: string; body?: string; outputKey?: string }}
+          onUpdateConfig={onUpdateConfig}
+        />
+      );
     default:
       return <p>Unknown node type.</p>;
   }
@@ -289,6 +297,105 @@ function SaveResultForm({
           value={resultKey}
           onChange={(e) => setResultKey(e.target.value)}
           placeholder="result"
+        />
+      </div>
+      <button
+        className="btn btn-primary btn-sm"
+        onClick={handleApply}
+        id="apply-config-btn"
+      >
+      </button>
+    </div>
+  );
+}
+
+// ─── HTTP Request ───────────────────────────────────────────────
+
+function HttpRequestForm({
+  nodeId,
+  config,
+  onUpdateConfig,
+}: {
+  nodeId: string;
+  config: { url?: string; method?: string; headers?: string; body?: string; outputKey?: string };
+  onUpdateConfig: (nodeId: string, config: Record<string, unknown>) => void;
+}) {
+  const [url, setUrl] = useState(config.url ?? '');
+  const [method, setMethod] = useState(config.method ?? 'GET');
+  const [headers, setHeaders] = useState(config.headers ?? '');
+  const [body, setBody] = useState(config.body ?? '');
+  const [outputKey, setOutputKey] = useState(config.outputKey ?? 'http_response');
+
+  useEffect(() => {
+    setUrl(config.url ?? '');
+    setMethod(config.method ?? 'GET');
+    setHeaders(config.headers ?? '');
+    setBody(config.body ?? '');
+    setOutputKey(config.outputKey ?? 'http_response');
+  }, [nodeId, config.url, config.method, config.headers, config.body, config.outputKey]);
+
+  const handleApply = useCallback(() => {
+    onUpdateConfig(nodeId, { url, method, headers, body, outputKey });
+  }, [nodeId, url, method, headers, body, outputKey, onUpdateConfig]);
+
+  return (
+    <div className="config-form">
+      <div className="form-group">
+        <label className="form-label" htmlFor="config-url">URL</label>
+        <input
+          id="config-url"
+          type="text"
+          className="form-input"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://api.example.com/data"
+        />
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="config-method">Method</label>
+        <select
+          id="config-method"
+          className="form-select"
+          value={method}
+          onChange={(e) => setMethod(e.target.value)}
+        >
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="config-headers">Headers (JSON)</label>
+        <textarea
+          id="config-headers"
+          className="form-input form-textarea"
+          value={headers}
+          onChange={(e) => setHeaders(e.target.value)}
+          placeholder='{"Authorization": "Bearer token"}'
+          rows={2}
+        />
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="config-body">Body (JSON)</label>
+        <textarea
+          id="config-body"
+          className="form-input form-textarea"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder='{"key": "value"}'
+          rows={3}
+        />
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="config-output-key">Output Key</label>
+        <input
+          id="config-output-key"
+          type="text"
+          className="form-input"
+          value={outputKey}
+          onChange={(e) => setOutputKey(e.target.value)}
+          placeholder="http_response"
         />
       </div>
       <button

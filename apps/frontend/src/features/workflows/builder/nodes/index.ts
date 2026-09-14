@@ -3,6 +3,7 @@ import { ManualTriggerNode } from './ManualTriggerNode';
 import { AiAnalyzeNode } from './AiAnalyzeNode';
 import { ConditionNode } from './ConditionNode';
 import { SaveResultNode } from './SaveResultNode';
+import { HttpRequestNode } from './HttpRequestNode';
 
 /**
  * Registry of custom node types for React Flow.
@@ -13,6 +14,7 @@ export const nodeTypes: NodeTypes = {
   ai_analyze: AiAnalyzeNode,
   condition: ConditionNode,
   save_result: SaveResultNode,
+  http_request: HttpRequestNode,
 };
 
-export { ManualTriggerNode, AiAnalyzeNode, ConditionNode, SaveResultNode };
+export { ManualTriggerNode, AiAnalyzeNode, ConditionNode, SaveResultNode, HttpRequestNode };

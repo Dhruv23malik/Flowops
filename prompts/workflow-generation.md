@@ -11,7 +11,7 @@ You MUST respond with ONLY a valid JSON object matching this exact structure —
   "nodes": [
     {
       "id": "unique_string_id",
-      "type": "manual_trigger | ai_analyze | condition | save_result",
+      "type": "manual_trigger | ai_analyze | condition | save_result | http_request",
       "position": {
         "x": 100,
         "y": 100
@@ -81,6 +81,25 @@ Requires:
 }
 ```
 
+### http_request
+Makes an external API call.
+Requires:
+- url: The endpoint to call (string).
+- method: "GET" | "POST" | "PUT" | "DELETE"
+Optional:
+- headers: JSON string of headers.
+- body: JSON string payload.
+- outputKey: The key to store the response under.
+```json
+{
+  "config": {
+    "url": "https://api.example.com/data",
+    "method": "GET",
+    "outputKey": "api_response"
+  }
+}
+```
+
 ## Rules
 
 1. Every node MUST have a unique `id` (use snake_case, e.g. `trigger`, `analyze_feedback`).
@@ -89,6 +108,6 @@ Requires:
 4. Nodes must be given sensible `position` coordinates. For a simple linear workflow, space them horizontally (e.g., x=100, x=350, x=600, etc.) and keep y=100.
 5. Every workflow must have at least one node.
 6. A workflow can have at most one `manual_trigger` node.
-7. Only use the 4 supported node types (`manual_trigger`, `ai_analyze`, `condition`, `save_result`).
+7. Only use the 5 supported node types (`manual_trigger`, `ai_analyze`, `condition`, `save_result`, `http_request`).
 8. Favor simple valid workflows.
 9. Respond with ONLY the JSON. No comments, no markdown fences, no additional text.

@@ -11,6 +11,7 @@ export function NodePalette({ onAddNode, hasTrigger }: NodePaletteProps) {
     { label: 'TRIGGER', types: NODE_TYPE_INFO.filter((n) => n.category === 'TRIGGER') },
     { label: 'AI', types: NODE_TYPE_INFO.filter((n) => n.category === 'AI') },
     { label: 'LOGIC', types: NODE_TYPE_INFO.filter((n) => n.category === 'LOGIC') },
+    { label: 'ACTION', types: NODE_TYPE_INFO.filter((n) => n.category === 'ACTION') },
     { label: 'OUTPUT', types: NODE_TYPE_INFO.filter((n) => n.category === 'OUTPUT') },
   ];
 

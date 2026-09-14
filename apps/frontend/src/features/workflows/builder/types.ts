@@ -26,7 +26,8 @@ export type NodeConfig =
   | ManualTriggerConfig
   | AiAnalyzeConfig
   | ConditionConfig
-  | SaveResultConfig;
+  | SaveResultConfig
+  | Record<string, unknown>; // For generic fallback like http_request config
 
 export interface FlowNodeData extends Record<string, unknown> {
   nodeType: NodeType;
@@ -78,6 +79,13 @@ export const NODE_TYPE_INFO: NodeTypeInfo[] = [
     description: 'Store a workflow result.',
     category: 'OUTPUT',
     icon: '↓',
+  },
+  {
+    type: 'http_request',
+    label: 'HTTP Request',
+    description: 'Make an external API call.',
+    category: 'ACTION',
+    icon: '🌐',
   },
 ];
 
