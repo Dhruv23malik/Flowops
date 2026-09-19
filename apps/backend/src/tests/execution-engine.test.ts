@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WorkflowExecutor } from '../services/execution/workflow-executor';
 import { WorkflowGraph } from '@flowops/schemas';
 

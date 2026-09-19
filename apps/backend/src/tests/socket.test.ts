@@ -44,7 +44,7 @@ describe('Socket Service', () => {
         },
       },
       handshake: {},
-      data: {},
+      data: {} as any,
     };
 
     const nextMock = vi.fn();

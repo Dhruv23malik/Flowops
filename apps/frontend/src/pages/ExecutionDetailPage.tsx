@@ -9,6 +9,7 @@ export function ExecutionDetailPage() {
   const [execution, setExecution] = useState<Execution | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDebuggerOpen, setIsDebuggerOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -36,8 +37,6 @@ export function ExecutionDetailPage() {
       </div>
     );
   }
-
-  const [isDebuggerOpen, setIsDebuggerOpen] = useState(false);
 
   const duration = formatDuration(execution.startedAt, execution.completedAt);
   const isSuccess = execution.status === 'SUCCESS';

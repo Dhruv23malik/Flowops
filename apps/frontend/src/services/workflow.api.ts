@@ -3,7 +3,7 @@ import { ApiException } from './auth.api';
 // ─── Types ────────────────────────────────────────────────────────
 
 export type WorkflowStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED';
-export type NodeType = 'manual_trigger' | 'ai_analyze' | 'condition' | 'save_result';
+export type NodeType = 'manual_trigger' | 'ai_analyze' | 'condition' | 'save_result' | 'http_request';
 
 export interface WorkflowNodePosition {
   x: number;

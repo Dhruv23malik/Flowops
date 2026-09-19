@@ -1,13 +1,13 @@
 import { WorkflowNode } from '@flowops/schemas';
 import { NodeExecutor } from '../node-executor';
 import { ExecutionContext, NodeExecutionResult } from '../execution.types';
-import { AnthropicLlmClient, LlmClient } from '../../workflow-generator';
+import { GeminiLlmClient, LlmClient } from '../../workflow-generator';
 
 export class AiAnalyzeExecutor implements NodeExecutor {
   private llm: LlmClient;
 
   constructor(llm?: LlmClient) {
-    this.llm = llm || new AnthropicLlmClient();
+    this.llm = llm || new GeminiLlmClient();
   }
 
   async execute(

@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: flowops-backend
+    env: node
+    buildCommand: npm run render:build
+    startCommand: npm run render:start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: flowops-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: JWT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+
+databases:
+  - name: flowops-db
+    databaseName: flowops
+    user: flowops

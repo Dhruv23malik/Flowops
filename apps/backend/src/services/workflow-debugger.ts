@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { AiDebugResponseSchema, AiDebugResponse } from "@flowops/schemas";
-import { LlmClient, AnthropicLlmClient } from "./workflow-generator";
+import { LlmClient, GeminiLlmClient } from "./workflow-generator";
 import db from "../db";
 
 const MAX_RETRIES = 2; // For V1, max 2 attempts
@@ -29,7 +29,7 @@ export class WorkflowDebugger {
   private retryPromptTemplate: string;
 
   constructor(llm?: LlmClient) {
-    this.llm = llm || new AnthropicLlmClient();
+    this.llm = llm || new GeminiLlmClient();
     this.systemPrompt = loadPrompt("workflow-debugger.md");
     this.retryPromptTemplate = loadPrompt("workflow-generator-retry.md"); // Reuse the retry prompt template, as it just says "Here are the validation errors: {{VALIDATION_ERRORS}} Please fix them and output JSON."
   }

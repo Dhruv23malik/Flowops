@@ -11,7 +11,7 @@ router.post('/auth/register', async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await db.user.create({
-      data: { email, password } // Note: password should be hashed in production
+      data: { email, passwordHash: password } // Note: password should be hashed in production
     });
     const token = generateToken(user.id, user.email);
     res.json({ token, user: { id: user.id, email: user.email } });
@@ -24,7 +24,7 @@ router.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
   const user = await db.user.findUnique({ where: { email } });
   
-  if (!user || user.password !== password) {
+  if (!user || user.passwordHash !== password) {
     res.status(401).json({ error: 'Invalid credentials' });
     return;
   }
@@ -82,7 +82,7 @@ router.post('/workflows/generate', authenticate, async (req: AuthRequest, res) =
   try {
     const result = await workflowGenerator.generate(prompt, workflowId);
 
-    if (!result.success || !result.graph) {
+    if (!result.success || !result.workflow) {
       res.status(422).json({
         error: 'Failed to generate a valid workflow',
         details: result.error,
@@ -114,7 +114,7 @@ router.post('/workflows/generate', authenticate, async (req: AuthRequest, res) =
       data: {
         workflowId: targetWorkflowId,
         version: (latestVersion?.version ?? 0) + 1,
-        graph: result.graph as any,
+        graph: result.workflow as any,
       },
     });
 
@@ -122,7 +122,7 @@ router.post('/workflows/generate', authenticate, async (req: AuthRequest, res) =
       workflowId: targetWorkflowId,
       versionId: version.id,
       version: version.version,
-      graph: result.graph,
+      graph: result.workflow,
       attempts: result.attempts,
     });
   } catch (error: any) {
@@ -152,7 +152,7 @@ router.post('/workflows/:id/executions', authenticate, async (req: AuthRequest, 
     data: {
       workflowId: id,
       workflowVersionId: targetVersionId,
-      status: 'PENDING'
+      status: 'QUEUED'
     }
   });
   

@@ -73,7 +73,7 @@ export async function debugExecution(
     }
 
     const { executionId } = parsed.data;
-    const userId = req.user!.id;
+    const userId = req.user!.userId;
 
     const result = await debuggerService.debugExecution(executionId, userId);
 

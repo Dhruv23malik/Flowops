@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import fs from "fs";
 import path from "path";
 import { WorkflowGraphSchema, type WorkflowGraph } from "@flowops/schemas";
@@ -28,29 +28,30 @@ export interface LlmClient {
   generateText(systemPrompt: string, userMessage: string): Promise<string>;
 }
 
-export class AnthropicLlmClient implements LlmClient {
-  private client: Anthropic;
+export class GeminiLlmClient implements LlmClient {
+  private client: GoogleGenAI;
 
   constructor(apiKey?: string) {
-    this.client = new Anthropic({
-      apiKey: apiKey || process.env.ANTHROPIC_API_KEY,
+    this.client = new GoogleGenAI({
+      apiKey: apiKey || process.env.GEMINI_API_KEY,
     });
   }
 
   async generateText(systemPrompt: string, userMessage: string): Promise<string> {
-    const response = await this.client.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userMessage }],
+    const response = await this.client.models.generateContent({
+      model: "gemini-3.6-flash",
+      contents: userMessage,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.2,
+      },
     });
 
-    // Extract text from the response
-    const textBlock = response.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
+    const text = response.text;
+    if (!text) {
       throw new Error("LLM returned no text content");
     }
-    return textBlock.text;
+    return text;
   }
 }
 
@@ -71,7 +72,7 @@ export class WorkflowGenerator {
   private retryPromptTemplate: string;
 
   constructor(llm?: LlmClient) {
-    this.llm = llm || new AnthropicLlmClient();
+    this.llm = llm || new GeminiLlmClient();
     this.systemPrompt = loadPrompt("workflow-generation.md");
     this.retryPromptTemplate = loadPrompt("workflow-generator-retry.md");
   }
@@ -137,6 +138,7 @@ export class WorkflowGenerator {
           .join("\n");
 
       } catch (err: any) {
+        console.error("LLM Generation Error:", err);
         const errorMsg = err instanceof SyntaxError
           ? `JSON parse error: ${err.message}`
           : err.message;
