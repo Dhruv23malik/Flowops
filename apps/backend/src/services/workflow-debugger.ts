@@ -31,7 +31,7 @@ export class WorkflowDebugger {
   constructor(llm?: LlmClient) {
     this.llm = llm || new GeminiLlmClient();
     this.systemPrompt = loadPrompt("workflow-debugger.md");
-    this.retryPromptTemplate = loadPrompt("workflow-generator-retry.md"); // Reuse the retry prompt template, as it just says "Here are the validation errors: {{VALIDATION_ERRORS}} Please fix them and output JSON."
+    this.retryPromptTemplate = loadPrompt("workflow-debugger-retry.md");
   }
 
   async debugExecution(executionId: string, userId: string): Promise<DebuggerResult> {

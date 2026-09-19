@@ -34,6 +34,7 @@ FlowOps uses a monolithic backend (Express.js) managing a PostgreSQL database (v
 - **WorkflowVersion:** Immutable snapshot of the workflow graph. Created automatically when a workflow is run (if the graph has changed since the last version). Executions are tied to a specific version.
 - **Execution:** A single run of a WorkflowVersion. Tracks overall status and timestamps.
 - **ExecutionStep:** Logs the result (status, duration, error, output) of a specific node within an Execution.
+- **ExecutionLog / retryCount:** These columns and tables exist in the schema as placeholders for future per-step logging but are not currently populated by any code.
 
 ## Node Types
 
@@ -45,14 +46,14 @@ The system supports 5 pluggable node types:
 | `ai_analyze` | Analyzes input using an LLM | `{ prompt, outputKey }` |
 | `condition` | Branches workflow based on a comparison | `{ field, operator, value }` |
 | `save_result` | Stores a result in the execution context | `{ resultKey }` |
-| `http_request` | Makes an external API call (with SSRF protection) | `{ url, method, headers?, body?, outputKey? }` |
+| `http_request` | Makes an external API call (with DNS-resolved private-address blocking) | `{ url, method, headers?, body?, outputKey? }` |
 
 ## Execution Lifecycle
 
 1. **Trigger:** A user clicks "Run" on the frontend.
 2. **Snapshot:** The backend compares the current `Workflow.nodes`/`edges` with the latest `WorkflowVersion`. If the graph has changed (or no version exists), a new immutable version is created.
 3. **Initialize:** An `Execution` record is created with status `RUNNING`.
-4. **Execution Engine:** The engine finds the `manual_trigger` node and walks the graph sequentially, following outgoing edges. For `condition` nodes, the engine follows the edge matching the evaluated branch (`true`/`false`).
+4. **Execution Engine:** The engine finds the `manual_trigger` node and walks the graph sequentially, following outgoing edges. For `condition` nodes, the engine follows the edge matching the evaluated branch (`yes`/`no`).
 5. **Cycle Guard:** Both the schema (DFS cycle detection) and the executor (visited-node set) prevent infinite loops.
 6. **Real-time Updates:** As each node starts and completes, the engine emits Socket.IO events to the user's specific room (`user:${userId}`).
 7. **Completion:** The Execution is marked `SUCCESS` or `FAILED` and a final event is emitted.

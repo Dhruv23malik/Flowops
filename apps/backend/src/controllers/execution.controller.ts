@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import db from '../db';
 import { WorkflowExecutor } from '../services/execution/workflow-executor';
-import { WorkflowGraph } from '@flowops/schemas';
+import { WorkflowGraph, validateWorkflowGraph } from '@flowops/schemas';
 
 const executor = new WorkflowExecutor();
 
@@ -40,6 +40,20 @@ export async function runWorkflow(req: AuthRequest, res: Response, next: NextFun
       res.status(400).json({
         success: false,
         error: { code: 'EMPTY_WORKFLOW', message: 'Workflow has no nodes. Add nodes before running.' },
+      });
+      return;
+    }
+
+    // Validate graph BEFORE creating a version — reject invalid graphs
+    // without leaving orphan version rows in the database.
+    const validation = validateWorkflowGraph(currentGraph);
+    if (!validation.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_WORKFLOW',
+          message: `Invalid workflow graph: ${validation.errors.join(', ')}`,
+        },
       });
       return;
     }

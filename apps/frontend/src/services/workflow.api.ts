@@ -57,8 +57,11 @@ export interface UpdateWorkflowData {
 
 // ─── API helper ───────────────────────────────────────────────────
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 async function workflowRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(path, {
+  const url = path.startsWith('http') ? path : `${API_URL}${path}`;
+  const res = await fetch(url, {
     ...options,
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...options.headers },

@@ -155,7 +155,7 @@ export function WorkflowToolbar({
         <button
           className="btn btn-secondary btn-sm"
           onClick={onRun}
-          disabled={isRunning || isDirty || isSaving || status === 'DRAFT'}
+          disabled={isRunning || isDirty || isSaving}
           title={isDirty ? "Save before running" : "Run this workflow"}
           id="run-workflow-btn"
         >

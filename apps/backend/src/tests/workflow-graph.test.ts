@@ -170,4 +170,57 @@ describe('WorkflowGraphSchema / validateWorkflowGraph', () => {
     });
     expect(result.success).toBe(true);
   });
+
+  // ─── Cycle Detection Tests ──────────────────────────────────────
+
+  it('rejects a 2-node cycle (A→B→A)', () => {
+    const result = validateWorkflowGraph({
+      nodes: [
+        makeNode('a', 'manual_trigger'),
+        makeNode('b', 'ai_analyze'),
+      ],
+      edges: [
+        makeEdge('a', 'b'),
+        makeEdge('b', 'a'),
+      ],
+    });
+    expect(result.success).toBe(false);
+    expect(result.errors.some((e) => e.toLowerCase().includes('cycle'))).toBe(true);
+  });
+
+  it('rejects a 3-node cycle (A→B→C→A)', () => {
+    const result = validateWorkflowGraph({
+      nodes: [
+        makeNode('a', 'manual_trigger'),
+        makeNode('b', 'ai_analyze'),
+        makeNode('c', 'save_result'),
+      ],
+      edges: [
+        makeEdge('a', 'b'),
+        makeEdge('b', 'c'),
+        makeEdge('c', 'a'),
+      ],
+    });
+    expect(result.success).toBe(false);
+    expect(result.errors.some((e) => e.toLowerCase().includes('cycle'))).toBe(true);
+  });
+
+  it('accepts a valid diamond-shaped DAG (A→B, A→C, B→D, C→D)', () => {
+    const result = validateWorkflowGraph({
+      nodes: [
+        makeNode('a', 'manual_trigger'),
+        makeNode('b', 'ai_analyze'),
+        makeNode('c', 'ai_analyze', { prompt: 'Alt path', outputKey: 'alt' }),
+        makeNode('d', 'save_result'),
+      ],
+      edges: [
+        makeEdge('a', 'b'),
+        makeEdge('a', 'c'),
+        makeEdge('b', 'd'),
+        makeEdge('c', 'd'),
+      ],
+    });
+    expect(result.success).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
 });
