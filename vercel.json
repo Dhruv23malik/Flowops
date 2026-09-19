@@ -1,6 +1,12 @@
 {
-  "buildCommand": "npm run build:frontend",
+  "buildCommand": "npm run vercel:build",
   "outputDirectory": "apps/frontend/dist",
   "installCommand": "npm install",
-  "framework": "vite"
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

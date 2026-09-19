@@ -17,11 +17,14 @@ class ApiException extends Error {
   }
 }
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const res = await fetch(path, {
+  const url = path.startsWith('http') ? path : `${API_URL}${path}`;
+  const res = await fetch(url, {
     ...options,
     credentials: 'include', // always send cookies
     headers: {

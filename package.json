@@ -13,6 +13,7 @@
     "build:backend": "npm run build --workspace=apps/backend",
     "build:frontend": "npm run build --workspace=apps/frontend",
     "build:schemas": "npm run build --workspace=packages/schemas",
+    "vercel:build": "npm run build:schemas && npm run build --workspace=apps/frontend",
     "render:build": "npm install && npm run build:schemas && npm run build --workspace=apps/backend",
     "render:start": "npm run start:render --workspace=apps/backend"
   }
