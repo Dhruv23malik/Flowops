@@ -21,6 +21,7 @@ You MUST respond with ONLY a valid JSON object matching this exact structure —
   ],
   "edges": [
     {
+      "id": "unique_edge_id",
       "source": "source_node_id",
       "target": "target_node_id"
     }

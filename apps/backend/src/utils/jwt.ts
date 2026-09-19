@@ -3,7 +3,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'flowops-dev-secret-change-in-prod';
+// Fail loudly in production if JWT_SECRET is not set
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is required in production');
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || 'flowops-dev-secret';
 const JWT_EXPIRES_IN = '7d';
 
 export interface TokenPayload {

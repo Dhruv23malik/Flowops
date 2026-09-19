@@ -117,7 +117,43 @@ export const WorkflowGraphSchema = z
       }
     }
 
-    // 5. Per-node type-specific config validation
+    // 5. Cycle detection (DFS)
+    const adj = new Map<string, string[]>();
+    for (const id of nodeIds) adj.set(id, []);
+    for (const edge of graph.edges) {
+      if (nodeIds.has(edge.source) && nodeIds.has(edge.target)) {
+        adj.get(edge.source)!.push(edge.target);
+      }
+    }
+
+    const visited = new Set<string>();
+    const inStack = new Set<string>();
+
+    function hasCycle(nodeId: string): boolean {
+      visited.add(nodeId);
+      inStack.add(nodeId);
+      for (const neighbor of adj.get(nodeId) ?? []) {
+        if (!visited.has(neighbor)) {
+          if (hasCycle(neighbor)) return true;
+        } else if (inStack.has(neighbor)) {
+          return true;
+        }
+      }
+      inStack.delete(nodeId);
+      return false;
+    }
+
+    for (const nodeId of nodeIds) {
+      if (!visited.has(nodeId) && hasCycle(nodeId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Workflow graph contains a cycle. Workflows must be acyclic (DAG).",
+        });
+        break;
+      }
+    }
+
+    // 6. Per-node type-specific config validation
     for (const node of graph.nodes) {
       const result = NodeConfigSchema.safeParse({ type: node.type, config: node.config });
       if (!result.success) {

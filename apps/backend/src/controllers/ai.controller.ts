@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { GenerateWorkflowRequestSchema } from '@flowops/schemas';
-import { AuthRequest } from '../auth';
+import { AuthRequest } from '../middleware/auth.middleware';
 import { WorkflowGenerator } from '../services/workflow-generator';
 
 const generator = new WorkflowGenerator();

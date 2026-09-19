@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../index';
-import { generateToken } from '../auth';
+import { createToken } from '../utils/jwt';
 
 const testUserId = 'test-exec-user-1';
-const validToken = generateToken(testUserId, 'test@exec.com');
+const validToken = createToken(testUserId, 'test@exec.com');
 const testWorkflowId = 'wf-1';
 const testVersionId = 'wv-1';
 
@@ -18,9 +18,17 @@ vi.mock('../db', () => ({
             id: testWorkflowId,
             userId: testUserId,
             name: 'Exec Test WF',
+            nodes: [
+              { id: '1', type: 'manual_trigger', position: { x: 0, y: 0 }, config: {} },
+              { id: '2', type: 'save_result', position: { x: 0, y: 0 }, config: { resultKey: 'input' } }
+            ],
+            edges: [
+              { id: 'e1', source: '1', target: '2' }
+            ],
             versions: [
               {
                 id: testVersionId,
+                version: 1,
                 graph: {
                   nodes: [
                     { id: '1', type: 'manual_trigger', position: { x: 0, y: 0 }, config: {} },

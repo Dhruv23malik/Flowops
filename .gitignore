@@ -14,7 +14,7 @@ build/
 *.db-journal
 
 # Prisma
-apps/backend/prisma/migrations/
+# Note: migrations/ must be committed for production deployments
 
 # IDE
 .vscode/

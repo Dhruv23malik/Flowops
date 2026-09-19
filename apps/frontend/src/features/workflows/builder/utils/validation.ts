@@ -40,7 +40,7 @@ export function validateWorkflowGraph(
   }
 
   // Validate node types
-  const validTypes = new Set(['manual_trigger', 'ai_analyze', 'condition', 'save_result']);
+  const validTypes = new Set(['manual_trigger', 'ai_analyze', 'condition', 'save_result', 'http_request']);
   for (const node of apiNodes) {
     if (!validTypes.has(node.type)) {
       errors.push(`Node "${node.id}" has invalid type "${node.type}".`);
@@ -71,6 +71,13 @@ export function validateWorkflowGraph(
         const config = node.config as { resultKey?: string };
         if (!config.resultKey || (typeof config.resultKey === 'string' && config.resultKey.trim() === '')) {
           errors.push(`Node "${node.id}" (Save Result): Result key is required.`);
+        }
+        break;
+      }
+      case 'http_request': {
+        const config = node.config as { url?: string };
+        if (!config.url || (typeof config.url === 'string' && config.url.trim() === '')) {
+          errors.push(`Node "${node.id}" (HTTP Request): URL is required.`);
         }
         break;
       }

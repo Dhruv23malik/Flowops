@@ -3,6 +3,27 @@ import { NodeExecutor } from '../node-executor';
 import { ExecutionContext, NodeExecutionResult } from '../execution.types';
 
 export class HttpRequestExecutor implements NodeExecutor {
+  private static readonly BLOCKED_HOSTNAME_PATTERNS = [
+    /^localhost$/i,
+    /^127\.\d+\.\d+\.\d+$/,
+    /^0\.0\.0\.0$/,
+    /^::1$/,
+    /^\[::1\]$/,
+    /^10\.\d+\.\d+\.\d+$/,
+    /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/,
+    /^192\.168\.\d+\.\d+$/,
+    /^169\.254\.\d+\.\d+$/, // AWS metadata / link-local
+  ];
+
+  private isBlockedUrl(urlString: string): boolean {
+    try {
+      const parsed = new URL(urlString);
+      return HttpRequestExecutor.BLOCKED_HOSTNAME_PATTERNS.some(p => p.test(parsed.hostname));
+    } catch {
+      return true; // Block unparseable URLs
+    }
+  }
+
   async execute(
     node: WorkflowNode,
     context: ExecutionContext
@@ -19,6 +40,13 @@ export class HttpRequestExecutor implements NodeExecutor {
       return {
         status: 'FAILED',
         error: 'HTTP Request node missing URL configuration',
+      };
+    }
+
+    if (this.isBlockedUrl(config.url)) {
+      return {
+        status: 'FAILED',
+        error: 'Requests to internal or private network addresses are not allowed',
       };
     }
 

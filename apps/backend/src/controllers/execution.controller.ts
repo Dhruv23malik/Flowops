@@ -22,19 +22,51 @@ export async function runWorkflow(req: AuthRequest, res: Response, next: NextFun
       },
     });
 
-    if (!workflow || workflow.versions.length === 0) {
+    if (!workflow) {
       res.status(404).json({
         success: false,
-        error: { code: 'WORKFLOW_NOT_FOUND', message: 'Workflow not found or has no versions saved' },
+        error: { code: 'WORKFLOW_NOT_FOUND', message: 'Workflow not found' },
       });
       return;
     }
 
-    const latestVersion = workflow.versions[0];
-    const graph = latestVersion.graph as unknown as WorkflowGraph;
+    // Build the current graph from the workflow's nodes/edges columns
+    const currentGraph: WorkflowGraph = {
+      nodes: (workflow as any).nodes as WorkflowGraph['nodes'] ?? [],
+      edges: (workflow as any).edges as WorkflowGraph['edges'] ?? [],
+    };
+
+    if (currentGraph.nodes.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'EMPTY_WORKFLOW', message: 'Workflow has no nodes. Add nodes before running.' },
+      });
+      return;
+    }
+
+    // Determine if we need a new version:
+    // - No versions exist yet, OR
+    // - The current graph differs from the latest version's graph
+    const latestVersion = workflow.versions[0] ?? null;
+    let versionToRun = latestVersion;
+
+    const needsNewVersion = !latestVersion || !graphsAreEqual(
+      currentGraph,
+      latestVersion.graph as unknown as WorkflowGraph
+    );
+
+    if (needsNewVersion) {
+      versionToRun = await db.workflowVersion.create({
+        data: {
+          workflowId: workflow.id,
+          version: (latestVersion?.version ?? 0) + 1,
+          graph: currentGraph as any,
+        },
+      });
+    }
 
     // The executor validates the graph, runs it, and saves state
-    const execution = await executor.run(workflow.id, latestVersion.id, graph, req.user!.userId);
+    const execution = await executor.run(workflow.id, versionToRun!.id, currentGraph, userId);
 
     res.status(200).json({
       success: true,
@@ -46,6 +78,11 @@ export async function runWorkflow(req: AuthRequest, res: Response, next: NextFun
       error: { code: 'EXECUTION_START_FAILED', message: err.message },
     });
   }
+}
+
+/** Deep-compare two workflow graphs by value (order-insensitive for nodes) */
+function graphsAreEqual(a: WorkflowGraph, b: WorkflowGraph): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 // GET /api/executions

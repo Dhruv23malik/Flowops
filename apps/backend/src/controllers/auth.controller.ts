@@ -3,10 +3,12 @@ import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { registerUser, loginUser, getUserById } from '../services/auth.service';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  secure: isProduction,
+  sameSite: (isProduction ? 'none' : 'lax') as 'none' | 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
@@ -100,8 +102,8 @@ export async function me(
 export function logout(_req: AuthRequest, res: Response): void {
   res.clearCookie('token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
   });
   res.json({ success: true, data: { message: 'Logged out successfully' } });
 }

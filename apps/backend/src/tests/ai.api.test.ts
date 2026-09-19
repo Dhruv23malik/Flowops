@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../index';
-import { generateToken } from '../auth';
+import { createToken } from '../utils/jwt';
 
 // ─── Mock DB ────────────────────────────────────────────────────────
 vi.mock('../db', () => ({
@@ -43,7 +43,7 @@ vi.mock('../services/workflow-generator', async (importOriginal) => {
 });
 
 describe('POST /api/ai/generate-workflow', () => {
-  const validToken = generateToken('user-1', 'test@test.com');
+  const validToken = createToken('user-1', 'test@test.com');
 
   beforeEach(() => {
     vi.clearAllMocks();

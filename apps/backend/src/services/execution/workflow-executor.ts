@@ -58,8 +58,14 @@ export class WorkflowExecutor {
 
       // 3. Resolve starting node
       let currentNode = this.findStartingNode(graph);
+      const visitedNodes = new Set<string>();
       
       while (currentNode) {
+        // Safety net: prevent infinite loops from cyclic graphs
+        if (visitedNodes.has(currentNode.id)) {
+          throw new Error(`Cycle detected at node "${currentNode.id}". Execution aborted.`);
+        }
+        visitedNodes.add(currentNode.id);
         // Create step record
         const step = await db.executionStep.create({
           data: {

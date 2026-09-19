@@ -24,7 +24,7 @@ This is an npm workspace monorepo.
 
 - Node.js (v18+)
 - PostgreSQL (running locally or remotely)
-- API Keys for AI features (Anthropic Claude or similar LLM)
+- API Keys for AI features (Google Gemini)
 
 ### Setup
 
@@ -37,7 +37,8 @@ This is an npm workspace monorepo.
    ```env
    DATABASE_URL="postgresql://user:password@localhost:5432/flowops?schema=public"
    JWT_SECRET="your_secret_here"
-   ANTHROPIC_API_KEY="your_api_key_here"
+   GEMINI_API_KEY="your_api_key_here"
+   FRONTEND_ORIGIN="http://localhost:3000"
    ```
 
 3. Initialize the database:
