@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run vercel:build",
+  "buildCommand": "npm run deploy:frontend",
   "outputDirectory": "apps/frontend/dist",
   "installCommand": "npm install",
   "framework": "vite",
