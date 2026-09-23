@@ -5,7 +5,7 @@ import { ApiException } from '../services/auth.api';
 import '../App.css';
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginAsGuest } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -96,6 +96,30 @@ export function LoginPage() {
                 Signing in…
               </>
             ) : 'Sign in'}
+          </button>
+          
+          <div style={{ marginTop: 16, textAlign: 'center', position: 'relative' }}>
+            <hr style={{ borderColor: 'var(--border-color)', margin: '0' }} />
+            <span style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'var(--bg-surface)', padding: '0 8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>or</span>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-secondary btn-full"
+            style={{ marginTop: 16 }}
+            onClick={async () => {
+              try {
+                setIsLoading(true);
+                await loginAsGuest();
+                navigate('/app/workflows', { replace: true });
+              } catch (err) {
+                setError('Failed to login as guest.');
+                setIsLoading(false);
+              }
+            }}
+            disabled={isLoading}
+          >
+            Continue as Guest
           </button>
         </form>
 
