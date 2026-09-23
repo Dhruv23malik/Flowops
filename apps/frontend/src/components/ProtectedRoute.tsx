@@ -1,10 +1,22 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useState } from 'react';
 
 export function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, loginAsGuest } = useAuth();
+  const [isInitializingGuest, setIsInitializingGuest] = useState(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && !isInitializingGuest) {
+      setIsInitializingGuest(true);
+      loginAsGuest().catch(() => {
+        // If guest login fails, we'll let it redirect to login
+        setIsInitializingGuest(false);
+      });
+    }
+  }, [isLoading, isAuthenticated, isInitializingGuest, loginAsGuest]);
+
+  if (isLoading || isInitializingGuest) {
     return (
       <div
         style={{
@@ -20,6 +32,7 @@ export function ProtectedRoute() {
     );
   }
 
+  // Fallback if guest login completely fails for some reason
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }

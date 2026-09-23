@@ -49,6 +49,7 @@ export interface User {
   id: string;
   name: string | null;
   email: string;
+  isGuest?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +73,12 @@ export async function apiLogin(email: string, password: string): Promise<AuthRes
   return apiRequest<AuthResponse>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function apiGuestLogin(): Promise<AuthResponse> {
+  return apiRequest<AuthResponse>('/api/auth/guest', {
+    method: 'POST',
   });
 }
 

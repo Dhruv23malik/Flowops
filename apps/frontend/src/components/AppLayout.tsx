@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { AuthModal } from './AuthModal';
 
 // ─── Icons (inline SVG to avoid deps) ─────────────────────────────
 
@@ -27,7 +29,7 @@ const IconRuns = () => (
 const IconSettings = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
   </svg>
 );
 
@@ -42,8 +44,9 @@ const IconLogout = () => (
 // ─── AppLayout ────────────────────────────────────────────────────
 
 export function AppLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, isGuest } = useAuth();
   const navigate = useNavigate();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -90,33 +93,51 @@ export function AppLayout() {
             Executions
           </NavLink>
 
-          <span className="sidebar-label">Account</span>
+          {!isGuest && (
+            <>
+              <span className="sidebar-label">Account</span>
 
-          <NavLink
-            to="/app/settings"
-            className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-          >
-            <span className="sidebar-link-icon"><IconSettings /></span>
-            Settings
-          </NavLink>
+              <NavLink
+                to="/app/settings"
+                className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+              >
+                <span className="sidebar-link-icon"><IconSettings /></span>
+                Settings
+              </NavLink>
+            </>
+          )}
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="sidebar-avatar">{initials}</div>
-            <div className="sidebar-user-info">
-              <div className="sidebar-user-name">{user?.name ?? 'User'}</div>
-              <div className="sidebar-user-email">{user?.email}</div>
+          {isGuest ? (
+            <div className="sidebar-guest-prompt" style={{ padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', lineHeight: 1.4 }}>
+                You are playing as a guest.
+              </p>
+              <button 
+                className="btn btn-primary btn-sm btn-full"
+                onClick={() => setIsAuthModalOpen(true)}
+              >
+                Sign up to save
+              </button>
             </div>
-            <button
-              className="logout-btn"
-              onClick={handleLogout}
-              title="Sign out"
-              aria-label="Sign out"
-            >
-              <IconLogout />
-            </button>
-          </div>
+          ) : (
+            <div className="sidebar-user">
+              <div className="sidebar-avatar">{initials}</div>
+              <div className="sidebar-user-info">
+                <div className="sidebar-user-name">{user?.name ?? 'User'}</div>
+                <div className="sidebar-user-email">{user?.email}</div>
+              </div>
+              <button
+                className="logout-btn"
+                onClick={handleLogout}
+                title="Sign out"
+                aria-label="Sign out"
+              >
+                <IconLogout />
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -124,6 +145,12 @@ export function AppLayout() {
       <main className="main-content">
         <Outlet />
       </main>
+
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        defaultMode="register" 
+      />
     </div>
   );
 }

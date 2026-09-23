@@ -6,7 +6,7 @@ import {
   type ReactNode,
   useCallback,
 } from 'react';
-import { apiGetMe, apiLogin, apiLogout, apiRegister, type User } from '../services/auth.api';
+import { apiGetMe, apiLogin, apiLogout, apiRegister, apiGuestLogin, type User } from '../services/auth.api';
 import { socketService } from '../services/socket';
 
 // ─── Types ─────────────────────────────────────────────────────────
@@ -17,9 +17,11 @@ interface AuthContextValue {
   user: User | null;
   status: AuthStatus;
   isAuthenticated: boolean;
+  isGuest: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  loginAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -62,6 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     socketService.connect();
   }, []);
 
+  const loginAsGuest = useCallback(async () => {
+    const { user } = await apiGuestLogin();
+    setUser(user);
+    setStatus('authenticated');
+    socketService.connect();
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await apiLogout();
@@ -79,9 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         status,
         isAuthenticated: status === 'authenticated',
+        isGuest: !!user?.isGuest,
         isLoading: status === 'loading',
         login,
         register,
+        loginAsGuest,
         logout,
       }}
     >

@@ -79,6 +79,29 @@ export async function login(
   }
 }
 
+export async function guestLogin(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const randomId = Math.random().toString(36).substring(2, 10);
+    const guestEmail = `guest_${randomId}@flowops.local`;
+    const guestPassword = `guest_${randomId}_password`;
+    
+    // Register the dummy guest user
+    const { user, token } = await registerUser('Guest User', guestEmail, guestPassword);
+
+    // Optionally attach a flag indicating it's a guest
+    const guestUser = { ...user, isGuest: true };
+
+    res.cookie('token', token, COOKIE_OPTIONS);
+    res.status(201).json({ success: true, data: { user: guestUser } });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function me(
   req: AuthRequest,
   res: Response,
@@ -93,7 +116,8 @@ export async function me(
       });
       return;
     }
-    res.json({ success: true, data: { user } });
+    const isGuest = user.email.endsWith('@flowops.local');
+    res.json({ success: true, data: { user: { ...user, isGuest } } });
   } catch (err) {
     next(err);
   }
