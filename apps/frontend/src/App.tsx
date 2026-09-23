@@ -3,14 +3,12 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 
 // Route guards
-import { ProtectedRoute, PublicOnlyRoute } from './components/ProtectedRoute';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Layout
 import { AppLayout } from './components/AppLayout';
 
 // Lazy-loaded pages for code splitting
-const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
-const RegisterPage = lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage').then(m => ({ default: m.WorkflowsPage })));
 const WorkflowNewPage = lazy(() => import('./pages/WorkflowNewPage').then(m => ({ default: m.WorkflowNewPage })));
@@ -25,13 +23,7 @@ function App() {
   return (
     <Suspense fallback={<div className="page-loader">Loading...</div>}>
       <Routes>
-        {/* Public-only routes (redirect to app if logged in) */}
-        <Route element={<PublicOnlyRoute />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Route>
-
-        {/* Protected routes (redirect to login if not logged in) */}
+        {/* Protected routes (automatically handles guest login) */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/app/overview" element={<DashboardPage />} />
@@ -49,6 +41,10 @@ function App() {
 
         {/* Root redirect */}
         <Route path="/" element={<Navigate to="/app/workflows" replace />} />
+
+        {/* Backwards compatibility for /login and /register -> redirect to app */}
+        <Route path="/login" element={<Navigate to="/app/workflows" replace />} />
+        <Route path="/register" element={<Navigate to="/app/workflows" replace />} />
 
         {/* 404 fallback */}
         <Route path="*" element={<NotFoundPage />} />
