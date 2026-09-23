@@ -14,13 +14,29 @@ const httpServer = createServer(app);
 
 const PORT = process.env.PORT || 3001;
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+const allowedOrigins = FRONTEND_ORIGIN.split(',').map(o => o.trim());
+
+// Match any Vercel preview/production URL for this project
+const vercelPreviewPattern = /^https:\/\/flowops[a-z0-9-]*(-dhruvmalik00000-8384s-projects)?\.vercel\.app$/;
 
 // Initialize Socket.IO
-initSocket(httpServer, FRONTEND_ORIGIN);
+initSocket(httpServer, allowedOrigins);
 
 // ─── Middleware ────────────────────────────────────────────────────
 app.use(cors({
-  origin: FRONTEND_ORIGIN,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. server-side proxy from Vercel rewrites, mobile apps, curl)
+    if (!origin) return callback(null, true);
+    // Check explicit allowlist
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // Check Vercel preview/production URLs
+    if (vercelPreviewPattern.test(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   credentials: true, // required for HttpOnly cookies
 }));
 app.use(express.json());
