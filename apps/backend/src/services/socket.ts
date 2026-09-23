@@ -4,10 +4,10 @@ import { verifyToken } from '../utils/jwt';
 
 let io: SocketIOServer;
 
-export const initSocket = (httpServer: HttpServer, frontendOrigin: string) => {
+export const initSocket = (httpServer: HttpServer, allowedOrigins: string | string[]) => {
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: frontendOrigin,
+      origin: allowedOrigins,
       credentials: true,
     },
   });
