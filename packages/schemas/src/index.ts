@@ -8,6 +8,8 @@ export const NodeType = z.enum([
   "condition",
   "save_result",
   "http_request",
+  "delay",
+  "set_variable",
 ]);
 export type NodeType = z.infer<typeof NodeType>;
 
@@ -38,6 +40,19 @@ export const HttpRequestConfigSchema = z.object({
   outputKey: z.string().optional(),
 });
 
+export const DelayConfigSchema = z.object({
+  seconds: z
+    .number()
+    .int("Seconds must be a whole number")
+    .min(1, "Delay must be at least 1 second")
+    .max(3600, "Delay must be at most 1 hour (3600 seconds)"),
+});
+
+export const SetVariableConfigSchema = z.object({
+  outputKey: z.string().min(1, "Output key is required"),
+  value: z.union([z.string(), z.number(), z.boolean()]),
+});
+
 // Discriminated union mapping type → config
 export const NodeConfigSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("manual_trigger"), config: ManualTriggerConfigSchema }),
@@ -45,6 +60,8 @@ export const NodeConfigSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("condition"), config: ConditionConfigSchema }),
   z.object({ type: z.literal("save_result"), config: SaveResultConfigSchema }),
   z.object({ type: z.literal("http_request"), config: HttpRequestConfigSchema }),
+  z.object({ type: z.literal("delay"), config: DelayConfigSchema }),
+  z.object({ type: z.literal("set_variable"), config: SetVariableConfigSchema }),
 ]);
 
 // ─── Workflow Node ──────────────────────────────────────────────

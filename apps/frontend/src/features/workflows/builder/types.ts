@@ -22,11 +22,22 @@ export interface SaveResultConfig {
   resultKey: string;
 }
 
+export interface DelayConfig {
+  seconds: number;
+}
+
+export interface SetVariableConfig {
+  outputKey: string;
+  value: string | number | boolean;
+}
+
 export type NodeConfig =
   | ManualTriggerConfig
   | AiAnalyzeConfig
   | ConditionConfig
   | SaveResultConfig
+  | DelayConfig
+  | SetVariableConfig
   | Record<string, unknown>; // For generic fallback like http_request config
 
 export interface FlowNodeData extends Record<string, unknown> {
@@ -86,6 +97,20 @@ export const NODE_TYPE_INFO: NodeTypeInfo[] = [
     description: 'Make an external API call.',
     category: 'ACTION',
     icon: '🌐',
+  },
+  {
+    type: 'delay',
+    label: 'Delay',
+    description: 'Pause the workflow for a few seconds.',
+    category: 'LOGIC',
+    icon: '⏱',
+  },
+  {
+    type: 'set_variable',
+    label: 'Set Variable',
+    description: 'Store a value for later steps to use.',
+    category: 'LOGIC',
+    icon: '✎',
   },
 ];
 

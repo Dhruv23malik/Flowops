@@ -23,12 +23,21 @@ export function ProtectedRoute() {
         style={{
           minHeight: '100vh',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           background: 'var(--bg-base)',
+          gap: '16px',
+          padding: '24px',
+          textAlign: 'center',
         }}
       >
+        <div className="auth-logo-icon" style={{ fontSize: '2rem' }}>⚡</div>
         <div className="spinner spinner-lg" />
+        <p style={{ margin: 0, color: 'var(--text-primary)' }}>Waking up the FlowOps server…</p>
+        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          First visit can take up to a minute — the free server sleeps when idle.
+        </p>
       </div>
     );
   }

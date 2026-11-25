@@ -49,7 +49,7 @@ export function WorkflowNewPage() {
         <div className="form-card">
           <h2 className="form-card-title">Workflow Details</h2>
           <p className="form-card-subtitle">
-            Give your workflow a name and description. You'll add nodes in Phase 3.
+            Give your workflow a name and description. You'll add nodes in the builder next — or describe the workflow in plain language and let AI generate it for you.
           </p>
 
           {error && (

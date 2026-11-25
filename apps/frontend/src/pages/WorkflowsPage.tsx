@@ -1,6 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiListWorkflows, type WorkflowListItem } from '../services/workflow.api';
+import {
+  apiListWorkflows,
+  apiCreateWorkflow,
+  apiGetWorkflow,
+  type WorkflowListItem,
+} from '../services/workflow.api';
+import { downloadWorkflowExport, parseWorkflowImport } from '../utils/workflow-export';
 import '../App.css';
 
 function timeAgo(dateStr: string) {
@@ -27,6 +33,8 @@ export function WorkflowsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     apiListWorkflows()
@@ -34,6 +42,39 @@ export function WorkflowsPage() {
       .catch(() => setError('Failed to load workflows. Please refresh.'))
       .finally(() => setIsLoading(false));
   }, []);
+
+  const handleExport = async (id: string) => {
+    try {
+      const detail = await apiGetWorkflow(id);
+      downloadWorkflowExport(detail);
+    } catch {
+      setError('Could not export that workflow. Please try again.');
+    }
+  };
+
+  const handleImportFile = async (file: File) => {
+    setError('');
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const parsed = parseWorkflowImport(text);
+      const name = workflows.some((w) => w.name === parsed.name)
+        ? `${parsed.name} (imported)`
+        : parsed.name;
+      const created = await apiCreateWorkflow({
+        name,
+        description: parsed.description ?? undefined,
+        nodes: parsed.nodes,
+        edges: parsed.edges,
+      });
+      setWorkflows((prev) => [created, ...prev]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not import that file.');
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const filtered = workflows.filter(
     (wf) =>
@@ -64,9 +105,29 @@ export function WorkflowsPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Link to="/app/workflows/new" className="btn btn-primary btn-sm" id="new-workflow-btn">
-            + New Workflow
-          </Link>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleImportFile(file);
+              }}
+            />
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+              id="import-workflow-btn"
+            >
+              {isImporting ? 'Importing…' : 'Import'}
+            </button>
+            <Link to="/app/workflows/new" className="btn btn-primary btn-sm" id="new-workflow-btn">
+              + New Workflow
+            </Link>
+          </div>
         </div>
 
         {/* Error */}
@@ -104,23 +165,31 @@ export function WorkflowsPage() {
         ) : (
           <div className="workflow-list">
             {filtered.map((wf) => (
-              <Link
+              <div
                 key={wf.id}
-                to={`/app/workflows/${wf.id}`}
                 className="workflow-card"
                 id={`workflow-${wf.id}`}
               >
-                <div className="workflow-card-info">
-                  <div className="workflow-card-name">{wf.name}</div>
-                  <div className="workflow-card-desc">
-                    {wf.description ?? 'No description'}
+                <Link to={`/app/workflows/${wf.id}`} className="workflow-card-link">
+                  <div className="workflow-card-info">
+                    <div className="workflow-card-name">{wf.name}</div>
+                    <div className="workflow-card-desc">
+                      {wf.description ?? 'No description'}
+                    </div>
                   </div>
-                </div>
+                </Link>
                 <div className="workflow-card-meta">
                   <StatusBadge status={wf.status} />
                   <span className="workflow-card-time">{timeAgo(wf.updatedAt)}</span>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => void handleExport(wf.id)}
+                    title="Download this workflow as a .flowops.json file"
+                  >
+                    Export
+                  </button>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}

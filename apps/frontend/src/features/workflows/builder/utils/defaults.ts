@@ -37,6 +37,21 @@ export function getDefaultConfig(type: NodeType): Record<string, unknown> {
       return {
         resultKey: 'result',
       };
+    case 'http_request':
+      return {
+        url: '',
+        method: 'GET',
+        outputKey: 'http_response',
+      };
+    case 'delay':
+      return {
+        seconds: 5,
+      };
+    case 'set_variable':
+      return {
+        outputKey: 'my_value',
+        value: '',
+      };
     default:
       return {};
   }

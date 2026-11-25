@@ -33,12 +33,11 @@ FlowOps uses a monolithic backend (Express.js) managing a PostgreSQL database (v
 - **Workflow:** High-level metadata (name, description, status) plus the current graph (`nodes`, `edges` as JSON columns).
 - **WorkflowVersion:** Immutable snapshot of the workflow graph. Created automatically when a workflow is run (if the graph has changed since the last version). Executions are tied to a specific version.
 - **Execution:** A single run of a WorkflowVersion. Tracks overall status and timestamps.
-- **ExecutionStep:** Logs the result (status, duration, error, output) of a specific node within an Execution.
-- **ExecutionLog / retryCount:** These columns and tables exist in the schema as placeholders for future per-step logging but are not currently populated by any code.
+- **ExecutionStep:** Logs the result (status, duration, error, output) of a specific node within an Execution. (v2 removed the dead `ExecutionLog` table and `ExecutionStep.retryCount` column — neither was ever written by any code; see migration `0002_drop_dead_schema`.)
 
 ## Node Types
 
-The system supports 5 pluggable node types:
+The system supports 7 pluggable node types:
 
 | Type | Purpose | Config |
 |------|---------|--------|
@@ -47,6 +46,8 @@ The system supports 5 pluggable node types:
 | `condition` | Branches workflow based on a comparison | `{ field, operator, value }` |
 | `save_result` | Stores a result in the execution context | `{ resultKey }` |
 | `http_request` | Makes an external API call (with DNS-resolved private-address blocking) | `{ url, method, headers?, body?, outputKey? }` |
+| `delay` | Pauses the workflow for a fixed time | `{ seconds }` (1–3600) |
+| `set_variable` | Stores a value in the execution outputs for later steps | `{ outputKey, value }` |
 
 ## Execution Lifecycle
 

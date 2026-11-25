@@ -396,6 +396,8 @@
 
 .workflow-card-info { flex: 1; min-width: 0; }
 
+.workflow-card-link { flex: 1; min-width: 0; text-decoration: none; color: inherit; }
+
 .workflow-card-name {
   font-size: 0.925rem; font-weight: 600; color: var(--text-primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;

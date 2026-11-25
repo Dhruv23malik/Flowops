@@ -14,7 +14,7 @@ const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage').then(m => ({ de
 const WorkflowNewPage = lazy(() => import('./pages/WorkflowNewPage').then(m => ({ default: m.WorkflowNewPage })));
 const WorkflowBuilder = lazy(() => import('./features/workflows/builder/WorkflowBuilder').then(m => ({ default: m.WorkflowBuilder })));
 const WorkflowEditPage = lazy(() => import('./pages/WorkflowEditPage').then(m => ({ default: m.WorkflowEditPage })));
-const SettingsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.SettingsPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const ExecutionsPage = lazy(() => import('./pages/ExecutionsPage').then(m => ({ default: m.ExecutionsPage })));
 const ExecutionDetailPage = lazy(() => import('./pages/ExecutionDetailPage').then(m => ({ default: m.ExecutionDetailPage })));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));

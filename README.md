@@ -1,76 +1,71 @@
-# FlowOps
+# FlowOps — AI Workflow Automation
 
-FlowOps is a modern platform for creating, managing, and executing AI-powered workflows.
+**Live demo:** https://flowops-azure.vercel.app/ — opens straight in as a guest, no sign-up needed. Three demo workflows are pre-loaded, so you can run one on first click.
 
-## Features
+FlowOps is a full-stack platform for creating, managing, and executing AI-powered workflows. Describe a workflow in plain language and Gemini generates the graph; run it and watch each step execute live over WebSockets. An AI debugger diagnoses failed runs and proposes fixes you can apply with one click.
 
-- **React Flow Builder:** Visually design workflows by connecting nodes.
-- **AI Workflow Generation:** Let FlowOps generate the perfect workflow graph based on your prompt.
-- **AI Debugger:** Automatically diagnose and fix failed workflow executions using an intelligent AI agent.
-- **Live Execution Monitoring:** Watch your workflows execute in real-time with WebSockets.
-- **Extensible Architecture:** Easily add new node types with strict schema validation using Zod.
+## What it does
 
-## Project Structure
+- **React Flow builder:** visually design workflows by connecting nodes.
+- **AI workflow generation:** natural-language prompt → validated workflow graph (Zod-validated, DAG cycle detection, up to 4 self-correcting retries).
+- **AI debugger:** diagnoses a failed execution and proposes a schema-validated fix (whitelisted actions only).
+- **Live execution monitoring:** step-by-step status streamed via Socket.IO, with immutable version snapshots per run.
+- **Execution engine:** 7 pluggable node types (manual trigger, AI analyze, condition branching, HTTP request with SSRF protection, save result, delay, set variable).
+- **Dashboard stats:** real runs, failures, success rate and average run time for the month — computed from execution history, not placeholders.
+- **Workflow export/import:** download any workflow as a `.flowops.json` file and import it back (validated before it is created).
+- **Account settings:** a real Settings page — guest accounts can upgrade to a free registered account to keep their work, and anyone can sign out.
+- **Auth:** JWT + bcrypt, with one-click guest mode.
 
-This is an npm workspace monorepo.
+## Tech stack
 
-- `/apps/frontend`: React (Vite) + TypeScript + React Flow + Tailwind CSS frontend.
-- `/apps/backend`: Express.js + Prisma + Socket.IO + AI Agent backend.
-- `/packages/schemas`: Shared Zod schemas for end-to-end type safety.
+- **Frontend:** React 19, Vite, TypeScript, React Flow, Tailwind CSS
+- **Backend:** Node.js, Express, TypeScript, Prisma, PostgreSQL, Socket.IO, Google Gemini
+- **Shared:** npm-workspaces monorepo with shared Zod schemas (`packages/schemas`) for end-to-end type safety
+- **Tests:** 98 backend tests (Vitest + Supertest, DB mocked) and 17 frontend smoke tests (Vitest) — run `npm run test --workspace=apps/backend` and `npm run test --workspace=apps/frontend`. CI runs both plus the frontend build on every push.
 
-## Getting Started
+## Try it locally
 
-### Prerequisites
-
-- Node.js (v18+)
-- PostgreSQL (running locally or remotely)
-- API Keys for AI features (Google Gemini)
-
-### Setup
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Configure environment variables in `apps/backend/.env`:
-   ```env
-   DATABASE_URL="postgresql://user:password@localhost:5432/flowops?schema=public"
-   JWT_SECRET="your_secret_here"
-   GEMINI_API_KEY="your_api_key_here"
-   FRONTEND_ORIGIN="http://localhost:3000"
-   ```
-
-3. Initialize the database:
-   ```bash
-   cd apps/backend
-   npx prisma migrate dev
-   ```
-
-4. Build shared packages:
-   ```bash
-   npm run build -w packages/schemas
-   ```
-
-### Running the App
-
-Start both frontend and backend concurrently from the root:
 ```bash
-npm run dev
+npm install
+npm run build:schemas
 ```
 
-Or run them individually:
-- Frontend: `cd apps/frontend && npm run dev`
-- Backend: `cd apps/backend && npm run dev`
+Set up the backend environment (`apps/backend/.env`):
 
-### Testing
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/flowops
+JWT_SECRET=your-secret
+GEMINI_API_KEY=your-gemini-key
+```
 
-Run backend tests:
 ```bash
 cd apps/backend
-npm run test
+npx prisma migrate dev
+npm run seed        # demo user + 3 demo workflows (idempotent)
+npm run dev         # API on :3001
+
+# in a second terminal, from the repo root:
+npm run dev --workspace=apps/frontend
 ```
+
+Or run the whole stack with Docker Compose (Postgres + API on :3001 + frontend on :4173):
+
+```bash
+docker compose up
+```
+
+To run just the database and the app locally instead:
+
+```bash
+docker compose up -d db
+```
+
+## Project structure
+
+- `/apps/frontend`: React (Vite) + TypeScript + React Flow + Tailwind CSS frontend.
+- `/apps/backend`: Express.js + Prisma + Socket.IO + AI agent backend.
+- `/packages/schemas`: shared Zod schemas for workflows, node configs, executions, and AI payloads.
 
 ## Architecture
 
-See [architecture.md](./architecture.md) for a detailed overview of the system design, node lifecycle, and data flow.
+See [architecture.md](./architecture.md) for the system design, node lifecycle, and data flow.

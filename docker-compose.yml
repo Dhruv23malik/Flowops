@@ -1,17 +1,48 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15
     restart: always
     environment:
       POSTGRES_USER: flowops
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: <redacted>
       POSTGRES_DB: flowops
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowops -d flowops"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://flowops:password@db:5432/flowops
+      JWT_SECRET: dev-only-change-me
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3001
+    restart: always
+    ports:
+      - "4173:4173"
+    depends_on:
+      - api
 
 volumes:
   db_data:

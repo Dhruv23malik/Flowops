@@ -40,7 +40,7 @@ export function validateWorkflowGraph(
   }
 
   // Validate node types
-  const validTypes = new Set(['manual_trigger', 'ai_analyze', 'condition', 'save_result', 'http_request']);
+  const validTypes = new Set(['manual_trigger', 'ai_analyze', 'condition', 'save_result', 'http_request', 'delay', 'set_variable']);
   for (const node of apiNodes) {
     if (!validTypes.has(node.type)) {
       errors.push(`Node "${node.id}" has invalid type "${node.type}".`);
@@ -78,6 +78,25 @@ export function validateWorkflowGraph(
         const config = node.config as { url?: string };
         if (!config.url || (typeof config.url === 'string' && config.url.trim() === '')) {
           errors.push(`Node "${node.id}" (HTTP Request): URL is required.`);
+        }
+        break;
+      }
+      case 'delay': {
+        const config = node.config as { seconds?: unknown };
+        if (
+          typeof config.seconds !== 'number' ||
+          !Number.isInteger(config.seconds) ||
+          config.seconds < 1 ||
+          config.seconds > 3600
+        ) {
+          errors.push(`Node "${node.id}" (Delay): Seconds must be a whole number between 1 and 3600.`);
+        }
+        break;
+      }
+      case 'set_variable': {
+        const config = node.config as { outputKey?: string };
+        if (!config.outputKey || (typeof config.outputKey === 'string' && config.outputKey.trim() === '')) {
+          errors.push(`Node "${node.id}" (Set Variable): Output key is required.`);
         }
         break;
       }

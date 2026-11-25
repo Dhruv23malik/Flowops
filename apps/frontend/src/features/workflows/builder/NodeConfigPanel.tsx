@@ -108,6 +108,22 @@ function ConfigForm({ nodeId, nodeType, config, onUpdateConfig }: ConfigFormProp
           onUpdateConfig={onUpdateConfig}
         />
       );
+    case 'delay':
+      return (
+        <DelayForm
+          nodeId={nodeId}
+          config={config as { seconds?: number }}
+          onUpdateConfig={onUpdateConfig}
+        />
+      );
+    case 'set_variable':
+      return (
+        <SetVariableForm
+          nodeId={nodeId}
+          config={config as { outputKey?: string; value?: string | number | boolean }}
+          onUpdateConfig={onUpdateConfig}
+        />
+      );
     default:
       return <p>Unknown node type.</p>;
   }
@@ -304,6 +320,7 @@ function SaveResultForm({
         onClick={handleApply}
         id="apply-config-btn"
       >
+        Apply Changes
       </button>
     </div>
   );
@@ -396,6 +413,121 @@ function HttpRequestForm({
           value={outputKey}
           onChange={(e) => setOutputKey(e.target.value)}
           placeholder="http_response"
+        />
+      </div>
+      <button
+        className="btn btn-primary btn-sm"
+        onClick={handleApply}
+        id="apply-config-btn"
+      >
+        Apply Changes
+      </button>
+    </div>
+  );
+}
+
+// ─── Delay ──────────────────────────────────────────────────────
+
+function DelayForm({
+  nodeId,
+  config,
+  onUpdateConfig,
+}: {
+  nodeId: string;
+  config: { seconds?: number };
+  onUpdateConfig: (nodeId: string, config: Record<string, unknown>) => void;
+}) {
+  const [seconds, setSeconds] = useState(String(config.seconds ?? 5));
+
+  useEffect(() => {
+    setSeconds(String(config.seconds ?? 5));
+  }, [nodeId, config.seconds]);
+
+  const handleApply = useCallback(() => {
+    const parsed = Math.floor(Number(seconds));
+    onUpdateConfig(nodeId, { seconds: Number.isNaN(parsed) ? 5 : Math.min(3600, Math.max(1, parsed)) });
+  }, [nodeId, seconds, onUpdateConfig]);
+
+  return (
+    <div className="config-form">
+      <div className="form-group">
+        <label className="form-label" htmlFor="config-seconds">Wait (seconds)</label>
+        <input
+          id="config-seconds"
+          type="number"
+          min={1}
+          max={3600}
+          step={1}
+          className="form-input"
+          value={seconds}
+          onChange={(e) => setSeconds(e.target.value)}
+          placeholder="5"
+        />
+        <p className="config-form__hint">Pause the workflow for 1–3600 seconds.</p>
+      </div>
+      <button
+        className="btn btn-primary btn-sm"
+        onClick={handleApply}
+        id="apply-config-btn"
+      >
+        Apply Changes
+      </button>
+    </div>
+  );
+}
+
+// ─── Set Variable ───────────────────────────────────────────────
+
+function SetVariableForm({
+  nodeId,
+  config,
+  onUpdateConfig,
+}: {
+  nodeId: string;
+  config: { outputKey?: string; value?: string | number | boolean };
+  onUpdateConfig: (nodeId: string, config: Record<string, unknown>) => void;
+}) {
+  const [outputKey, setOutputKey] = useState(config.outputKey ?? 'my_value');
+  const [value, setValue] = useState(String(config.value ?? ''));
+
+  useEffect(() => {
+    setOutputKey(config.outputKey ?? 'my_value');
+    setValue(String(config.value ?? ''));
+  }, [nodeId, config.outputKey, config.value]);
+
+  const handleApply = useCallback(() => {
+    // Try to parse value as number or boolean (same as Condition)
+    let parsedValue: string | number | boolean = value;
+    if (value === 'true') parsedValue = true;
+    else if (value === 'false') parsedValue = false;
+    else if (value !== '' && !isNaN(Number(value))) parsedValue = Number(value);
+
+    onUpdateConfig(nodeId, { outputKey, value: parsedValue });
+  }, [nodeId, outputKey, value, onUpdateConfig]);
+
+  return (
+    <div className="config-form">
+      <div className="form-group">
+        <label className="form-label" htmlFor="config-output-key">Output Key</label>
+        <input
+          id="config-output-key"
+          type="text"
+          className="form-input"
+          value={outputKey}
+          onChange={(e) => setOutputKey(e.target.value)}
+          placeholder="my_value"
+        />
+        <p className="config-form__hint">Later steps read this as a field (e.g. a Condition can check it).</p>
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="config-value">Value</label>
+        <input
+          id="config-value"
+          type="text"
+          className="form-input"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="e.g., 70"
         />
       </div>
       <button

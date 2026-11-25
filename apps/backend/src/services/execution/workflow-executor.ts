@@ -7,6 +7,8 @@ import { AiAnalyzeExecutor } from './node-executors/ai-analyze.executor';
 import { ConditionExecutor } from './node-executors/condition.executor';
 import { SaveResultExecutor } from './node-executors/save-result.executor';
 import { HttpRequestExecutor } from './node-executors/http-request.executor';
+import { DelayExecutor } from './node-executors/delay.executor';
+import { SetVariableExecutor } from './node-executors/set-variable.executor';
 import { getIo } from '../socket';
 
 export class WorkflowExecutor {
@@ -19,6 +21,8 @@ export class WorkflowExecutor {
       condition: new ConditionExecutor(),
       save_result: new SaveResultExecutor(),
       http_request: new HttpRequestExecutor(),
+      delay: new DelayExecutor(),
+      set_variable: new SetVariableExecutor(),
     };
   }
 

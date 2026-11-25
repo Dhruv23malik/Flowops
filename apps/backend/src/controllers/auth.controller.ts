@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { registerUser, loginUser, getUserById } from '../services/auth.service';
+import { seedDemoWorkflowsForUser } from '../services/demo-templates';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -91,6 +92,15 @@ export async function guestLogin(
     
     // Register the dummy guest user
     const { user, token } = await registerUser('Guest User', guestEmail, guestPassword);
+
+    // Seed 3 demo workflows (+ 1 finished run) so a first-time visitor
+    // sees a working product, not "No workflows yet". Best-effort: a
+    // seeding failure must never fail the login itself.
+    try {
+      await seedDemoWorkflowsForUser(user.id);
+    } catch (err) {
+      console.error('Failed to seed demo workflows for guest user:', err);
+    }
 
     // Optionally attach a flag indicating it's a guest
     const guestUser = { ...user, isGuest: true };

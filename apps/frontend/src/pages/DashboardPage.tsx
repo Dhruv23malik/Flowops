@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiListWorkflows, type WorkflowListItem } from '../services/workflow.api';
+import { executionApi } from '../services/execution.api';
+import { computeExecutionStats, formatDuration } from '../utils/execution-stats';
 import '../App.css';
 
 function getGreeting() {
@@ -34,12 +36,17 @@ export function DashboardPage() {
   const { user } = useAuth();
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({ runsThisMonth: 0, failedThisMonth: 0, successRate: null as number | null, avgDurationMs: null as number | null });
 
   useEffect(() => {
     apiListWorkflows()
       .then(setWorkflows)
       .catch(console.error)
       .finally(() => setIsLoading(false));
+    executionApi
+      .listExecutions()
+      .then(({ executions }) => setStats(computeExecutionStats(executions)))
+      .catch(console.error);
   }, []);
 
   const firstName = user?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'there';
@@ -64,13 +71,20 @@ export function DashboardPage() {
           </div>
           <div className="stat-card">
             <div className="stat-label">Runs</div>
-            <div className="stat-value">0</div>
+            <div className="stat-value">{isLoading ? '—' : stats.runsThisMonth}</div>
             <div className="stat-description">Executions this month</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Failed</div>
-            <div className="stat-value">0</div>
-            <div className="stat-description">Failed executions</div>
+            <div className="stat-value">{isLoading ? '—' : stats.failedThisMonth}</div>
+            <div className="stat-description">Failed executions this month</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Success rate</div>
+            <div className="stat-value">{isLoading ? '—' : stats.successRate === null ? '—' : `${Math.round(stats.successRate * 100)}%`}</div>
+            <div className="stat-description">
+              {stats.avgDurationMs === null ? 'No completed runs yet' : `Avg run ${formatDuration(stats.avgDurationMs)}`}
+            </div>
           </div>
         </div>
 

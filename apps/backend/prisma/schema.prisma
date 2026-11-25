@@ -89,8 +89,6 @@ model ExecutionStep {
   error       String?
   input       Json?
   output      Json?
-  retryCount  Int                @default(0)
-  logs        ExecutionLog[]
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
@@ -103,15 +101,6 @@ enum StepStatus {
   SUCCESS
   FAILED
   RETRYING
-}
-
-model ExecutionLog {
-  id              String        @id @default(uuid())
-  executionStepId String
-  executionStep   ExecutionStep @relation(fields: [executionStepId], references: [id], onDelete: Cascade)
-  level           String        // INFO, ERROR, WARN
-  message         String
-  timestamp       DateTime      @default(now())
 }
 
 // Tracks every LLM generation attempt for the "first-try valid %" metric
