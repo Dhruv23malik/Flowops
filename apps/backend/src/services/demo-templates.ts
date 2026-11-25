@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import prisma from '../db';
 
 /**
@@ -142,8 +143,8 @@ export async function seedDemoWorkflowsForUser(userId: string): Promise<void> {
         name: template.name,
         description: template.description,
         status: template.status,
-        nodes: template.nodes,
-        edges: template.edges,
+        nodes: template.nodes as unknown as Prisma.InputJsonValue,
+        edges: template.edges as unknown as Prisma.InputJsonValue,
         userId,
       },
     });
@@ -155,7 +156,7 @@ export async function seedDemoWorkflowsForUser(userId: string): Promise<void> {
         data: {
           workflowId: workflow.id,
           version: 1,
-          graph: { nodes: template.nodes, edges: template.edges },
+          graph: { nodes: template.nodes, edges: template.edges } as unknown as Prisma.InputJsonValue,
         },
       });
       const execution = await prisma.execution.create({
