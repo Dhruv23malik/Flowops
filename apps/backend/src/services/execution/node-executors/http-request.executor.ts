@@ -1,6 +1,7 @@
 import { WorkflowNode } from '@flowops/schemas';
 import { NodeExecutor } from '../node-executor';
 import { ExecutionContext, NodeExecutionResult } from '../execution.types';
+import { interpolateTemplate } from '../template.utils';
 import dns from 'node:dns';
 import { isIP } from 'node:net';
 
@@ -106,7 +107,10 @@ export class HttpRequestExecutor implements NodeExecutor {
       };
     }
 
-    if (await this.isBlockedUrl(config.url)) {
+    // Interpolate variables BEFORE SSRF validation so variables cannot smuggle internal hosts
+    const resolvedUrl = interpolateTemplate(config.url, context.outputs).trim();
+
+    if (await this.isBlockedUrl(resolvedUrl)) {
       return {
         status: 'FAILED',
         error: 'Requests to internal or private network addresses are not allowed',
@@ -114,11 +118,11 @@ export class HttpRequestExecutor implements NodeExecutor {
     }
 
     try {
-      // Parse headers
+      // Parse headers (with template interpolation)
       let headers: Record<string, string> = {};
       if (config.headers) {
         try {
-          headers = JSON.parse(config.headers);
+          headers = JSON.parse(interpolateTemplate(config.headers, context.outputs));
         } catch (e) {
           return {
             status: 'FAILED',
@@ -129,21 +133,31 @@ export class HttpRequestExecutor implements NodeExecutor {
 
       // Prepare request options — redirect: 'manual' prevents following
       // 3xx redirects to internal hosts that would bypass the SSRF check
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30_000); // 30s timeout
+
       const reqOptions: RequestInit = {
         method: config.method || 'GET',
         headers,
         redirect: 'manual',
+        signal: controller.signal,
       };
 
       if (config.body && config.method !== 'GET') {
-        reqOptions.body = config.body;
+        const resolvedBody = interpolateTemplate(config.body, context.outputs);
+        reqOptions.body = resolvedBody;
         // Auto-set content type to JSON if not specified and body looks like JSON
-        if (!headers['Content-Type'] && config.body.trim().startsWith('{')) {
+        if (!headers['Content-Type'] && resolvedBody.trim().startsWith('{')) {
           headers['Content-Type'] = 'application/json';
         }
       }
 
-      const response = await fetch(config.url, reqOptions);
+      let response: Response;
+      try {
+        response = await fetch(resolvedUrl, reqOptions);
+      } finally {
+        clearTimeout(timeout);
+      }
 
       // Manual redirect handling: report redirect as a controlled failure
       if (response.status >= 300 && response.status < 400) {

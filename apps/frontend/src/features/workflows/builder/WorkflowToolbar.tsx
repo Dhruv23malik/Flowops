@@ -9,8 +9,10 @@ interface WorkflowToolbarProps {
   saveError: string | null;
   onSave: () => void;
   onNameChange: (name: string) => void;
+  onStatusChange: (status: WorkflowStatus) => void;
   onBack: () => void;
   onGenerateAI: () => void;
+  onOpenWebhook: () => void;
   onRun: () => void;
   isRunning: boolean;
 }
@@ -23,8 +25,10 @@ export function WorkflowToolbar({
   saveError,
   onSave,
   onNameChange,
+  onStatusChange,
   onBack,
   onGenerateAI,
+  onOpenWebhook,
   onRun,
   isRunning,
 }: WorkflowToolbarProps) {
@@ -33,15 +37,16 @@ export function WorkflowToolbar({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setEditValue(workflowName);
-  }, [workflowName]);
-
-  useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
     }
   }, [isEditing]);
+
+  const startEditing = () => {
+    setEditValue(workflowName);
+    setIsEditing(true);
+  };
 
   const handleSubmitName = () => {
     const trimmed = editValue.trim();
@@ -61,8 +66,6 @@ export function WorkflowToolbar({
       setIsEditing(false);
     }
   };
-
-  const statusLabel = status.charAt(0) + status.slice(1).toLowerCase();
 
   return (
     <div className="builder-toolbar" id="workflow-toolbar">
@@ -98,7 +101,7 @@ export function WorkflowToolbar({
         ) : (
           <button
             className="builder-toolbar__name"
-            onClick={() => setIsEditing(true)}
+            onClick={startEditing}
             title="Click to rename"
             id="workflow-name-btn"
           >
@@ -109,9 +112,18 @@ export function WorkflowToolbar({
             </svg>
           </button>
         )}
-        <span className={`status-badge ${status.toLowerCase()}`} style={{ marginLeft: 10 }}>
-          {statusLabel}
-        </span>
+        <select
+          className={`status-badge ${status.toLowerCase()}`}
+          style={{ marginLeft: 10, border: 'none', cursor: 'pointer', font: 'inherit', fontSize: '0.75rem', fontWeight: 600 }}
+          value={status}
+          onChange={(e) => onStatusChange(e.target.value as WorkflowStatus)}
+          aria-label="Workflow status"
+          id="workflow-status-select"
+        >
+          <option value="DRAFT">Draft</option>
+          <option value="ACTIVE">Active</option>
+          <option value="PAUSED">Paused</option>
+        </select>
       </div>
 
       <div className="builder-toolbar__right">
@@ -140,6 +152,15 @@ export function WorkflowToolbar({
         </button>
 
         <button
+          className="btn btn-secondary btn-sm"
+          onClick={onOpenWebhook}
+          title="Get webhook trigger URL for external integrations"
+          id="webhook-info-btn"
+        >
+          🔗 Webhook
+        </button>
+
+        <button
           className="btn btn-primary btn-sm"
           onClick={onSave}
           disabled={isSaving}
@@ -156,7 +177,7 @@ export function WorkflowToolbar({
           className="btn btn-secondary btn-sm"
           onClick={onRun}
           disabled={isRunning || isDirty || isSaving}
-          title={isDirty ? "Save before running" : "Run this workflow"}
+          title={isDirty ? 'Save before running' : 'Run this workflow'}
           id="run-workflow-btn"
         >
           {isRunning ? (

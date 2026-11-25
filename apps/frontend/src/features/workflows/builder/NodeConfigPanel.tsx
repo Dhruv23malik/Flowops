@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { FlowNode, FlowNodeData } from './types';
 import { getNodeTypeInfo } from './types';
 import type { NodeType } from '../../../services/workflow.api';
@@ -42,7 +42,9 @@ export function NodeConfigPanel({
       </div>
 
       <div className="config-panel__body">
+        {/* Keyed by node.id so switching nodes resets local form state without effects */}
         <ConfigForm
+          key={node.id}
           nodeId={node.id}
           nodeType={nodeData.nodeType}
           config={nodeData.config}
@@ -75,7 +77,13 @@ interface ConfigFormProps {
 function ConfigForm({ nodeId, nodeType, config, onUpdateConfig }: ConfigFormProps) {
   switch (nodeType) {
     case 'manual_trigger':
-      return <ManualTriggerForm />;
+      return (
+        <ManualTriggerForm
+          nodeId={nodeId}
+          config={config as { sampleInput?: Record<string, unknown> }}
+          onUpdateConfig={onUpdateConfig}
+        />
+      );
     case 'ai_analyze':
       return (
         <AiAnalyzeForm
@@ -131,11 +139,69 @@ function ConfigForm({ nodeId, nodeType, config, onUpdateConfig }: ConfigFormProp
 
 // ─── Manual Trigger ──────────────────────────────────────────────
 
-function ManualTriggerForm() {
+function ManualTriggerForm({
+  nodeId,
+  config,
+  onUpdateConfig,
+}: {
+  nodeId: string;
+  config: { sampleInput?: Record<string, unknown> };
+  onUpdateConfig: (nodeId: string, config: Record<string, unknown>) => void;
+}) {
+  const [sampleJson, setSampleJson] = useState(() =>
+    config.sampleInput ? JSON.stringify(config.sampleInput, null, 2) : '',
+  );
+  const [jsonError, setJsonError] = useState('');
+
+  const handleApply = useCallback(() => {
+    const trimmed = sampleJson.trim();
+    if (!trimmed) {
+      setJsonError('');
+      onUpdateConfig(nodeId, {});
+      return;
+    }
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        setJsonError('Sample input must be a JSON object, e.g. {"feedback": "Great app!"}');
+        return;
+      }
+      setJsonError('');
+      onUpdateConfig(nodeId, { sampleInput: parsed });
+    } catch {
+      setJsonError('Invalid JSON syntax.');
+    }
+  }, [nodeId, sampleJson, onUpdateConfig]);
+
   return (
-    <div className="config-form__message">
-      <p>This node starts the workflow manually.</p>
-      <p className="config-form__hint">No configuration required.</p>
+    <div className="config-form">
+      <div className="config-form__message" style={{ marginBottom: 12 }}>
+        <p>Starts the workflow manually or via webhook.</p>
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="config-sample-input">
+          Default / Sample Input (JSON)
+        </label>
+        <textarea
+          id="config-sample-input"
+          className="form-input form-textarea"
+          value={sampleJson}
+          onChange={(e) => setSampleJson(e.target.value)}
+          placeholder='{"feedback": "Checkout failed with 500"}'
+          rows={5}
+        />
+        <p className="config-form__hint">
+          Optional. Available in later steps as <code>{'{{input.key}}'}</code>.
+        </p>
+        {jsonError && <p className="form-error">{jsonError}</p>}
+      </div>
+      <button
+        className="btn btn-primary btn-sm"
+        onClick={handleApply}
+        id="apply-config-btn"
+      >
+        Apply Changes
+      </button>
     </div>
   );
 }
@@ -154,12 +220,6 @@ function AiAnalyzeForm({
   const [prompt, setPrompt] = useState(config.prompt ?? '');
   const [outputKey, setOutputKey] = useState(config.outputKey ?? 'result');
 
-  // Sync when node changes
-  useEffect(() => {
-    setPrompt(config.prompt ?? '');
-    setOutputKey(config.outputKey ?? 'result');
-  }, [nodeId, config.prompt, config.outputKey]);
-
   const handleApply = useCallback(() => {
     onUpdateConfig(nodeId, { prompt, outputKey });
   }, [nodeId, prompt, outputKey, onUpdateConfig]);
@@ -173,9 +233,12 @@ function AiAnalyzeForm({
           className="form-input form-textarea"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Describe what this AI step should analyze…"
+          placeholder="Analyze {{input.feedback}} and return JSON with sentiment and urgency…"
           rows={4}
         />
+        <p className="config-form__hint">
+          Supports variables like <code>{'{{input.text}}'}</code> or <code>{'{{api_data.title}}'}</code>.
+        </p>
       </div>
       <div className="form-group">
         <label className="form-label" htmlFor="config-output-key">Output Key</label>
@@ -214,14 +277,7 @@ function ConditionForm({
   const [operator, setOperator] = useState(config.operator ?? '==');
   const [value, setValue] = useState(String(config.value ?? ''));
 
-  useEffect(() => {
-    setField(config.field ?? '');
-    setOperator(config.operator ?? '==');
-    setValue(String(config.value ?? ''));
-  }, [nodeId, config.field, config.operator, config.value]);
-
   const handleApply = useCallback(() => {
-    // Try to parse value as number or boolean
     let parsedValue: string | number | boolean = value;
     if (value === 'true') parsedValue = true;
     else if (value === 'false') parsedValue = false;
@@ -240,7 +296,7 @@ function ConditionForm({
           className="form-input"
           value={field}
           onChange={(e) => setField(e.target.value)}
-          placeholder="e.g., score"
+          placeholder="e.g., summary.urgency"
         />
       </div>
       <div className="form-group">
@@ -253,6 +309,8 @@ function ConditionForm({
         >
           <option value="==">== (equals)</option>
           <option value="!=">!= (not equals)</option>
+          <option value="contains">contains</option>
+          <option value="not_contains">not contains</option>
           <option value=">">&gt; (greater than)</option>
           <option value="<">&lt; (less than)</option>
           <option value=">=">&gt;= (greater or equal)</option>
@@ -267,7 +325,7 @@ function ConditionForm({
           className="form-input"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="e.g., 70"
+          placeholder="e.g., high"
         />
       </div>
       <button
@@ -293,10 +351,6 @@ function SaveResultForm({
   onUpdateConfig: (nodeId: string, config: Record<string, unknown>) => void;
 }) {
   const [resultKey, setResultKey] = useState(config.resultKey ?? 'result');
-
-  useEffect(() => {
-    setResultKey(config.resultKey ?? 'result');
-  }, [nodeId, config.resultKey]);
 
   const handleApply = useCallback(() => {
     onUpdateConfig(nodeId, { resultKey });
@@ -343,14 +397,6 @@ function HttpRequestForm({
   const [body, setBody] = useState(config.body ?? '');
   const [outputKey, setOutputKey] = useState(config.outputKey ?? 'http_response');
 
-  useEffect(() => {
-    setUrl(config.url ?? '');
-    setMethod(config.method ?? 'GET');
-    setHeaders(config.headers ?? '');
-    setBody(config.body ?? '');
-    setOutputKey(config.outputKey ?? 'http_response');
-  }, [nodeId, config.url, config.method, config.headers, config.body, config.outputKey]);
-
   const handleApply = useCallback(() => {
     onUpdateConfig(nodeId, { url, method, headers, body, outputKey });
   }, [nodeId, url, method, headers, body, outputKey, onUpdateConfig]);
@@ -367,6 +413,9 @@ function HttpRequestForm({
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://api.example.com/data"
         />
+        <p className="config-form__hint">
+          Supports <code>{'{{variable}}'}</code> interpolation. Internal/private IPs are blocked.
+        </p>
       </div>
       <div className="form-group">
         <label className="form-label" htmlFor="config-method">Method</label>
@@ -400,7 +449,7 @@ function HttpRequestForm({
           className="form-input form-textarea"
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder='{"key": "value"}'
+          placeholder='{"summary": "{{summary}}"}'
           rows={3}
         />
       </div>
@@ -438,10 +487,6 @@ function DelayForm({
   onUpdateConfig: (nodeId: string, config: Record<string, unknown>) => void;
 }) {
   const [seconds, setSeconds] = useState(String(config.seconds ?? 5));
-
-  useEffect(() => {
-    setSeconds(String(config.seconds ?? 5));
-  }, [nodeId, config.seconds]);
 
   const handleApply = useCallback(() => {
     const parsed = Math.floor(Number(seconds));
@@ -490,13 +535,7 @@ function SetVariableForm({
   const [outputKey, setOutputKey] = useState(config.outputKey ?? 'my_value');
   const [value, setValue] = useState(String(config.value ?? ''));
 
-  useEffect(() => {
-    setOutputKey(config.outputKey ?? 'my_value');
-    setValue(String(config.value ?? ''));
-  }, [nodeId, config.outputKey, config.value]);
-
   const handleApply = useCallback(() => {
-    // Try to parse value as number or boolean (same as Condition)
     let parsedValue: string | number | boolean = value;
     if (value === 'true') parsedValue = true;
     else if (value === 'false') parsedValue = false;
@@ -517,7 +556,9 @@ function SetVariableForm({
           onChange={(e) => setOutputKey(e.target.value)}
           placeholder="my_value"
         />
-        <p className="config-form__hint">Later steps read this as a field (e.g. a Condition can check it).</p>
+        <p className="config-form__hint">
+          Later steps read this as a field or <code>{'{{my_value}}'}</code>.
+        </p>
       </div>
       <div className="form-group">
         <label className="form-label" htmlFor="config-value">Value</label>
@@ -527,7 +568,7 @@ function SetVariableForm({
           className="form-input"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="e.g., 70"
+          placeholder="e.g., 70 or {{input.name}}"
         />
       </div>
       <button

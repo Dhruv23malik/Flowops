@@ -1,5 +1,5 @@
 # FlowOps frontend — built from the repo root (build context: .)
-# Serves the production build with `vite preview` on port 4173.
+# Serves the production build with `serve` on port 4173.
 FROM node:20-alpine
 
 WORKDIR /app
@@ -17,6 +17,9 @@ COPY packages/schemas packages/schemas
 COPY apps/frontend apps/frontend
 RUN npm run build --workspace=@flowops/schemas && npm run build --workspace=@flowops/frontend
 
+# Install a production-grade static file server
+RUN npm install -g serve
+
 WORKDIR /app/apps/frontend
 EXPOSE 4173
-CMD ["npx", "vite", "preview", "--port", "4173", "--host", "0.0.0.0"]
+CMD ["serve", "-s", "dist", "-l", "4173"]

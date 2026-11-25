@@ -26,7 +26,13 @@ export class WorkflowExecutor {
     };
   }
 
-  async run(workflowId: string, versionId: string, graph: WorkflowGraph, userId: string) {
+  async run(
+    workflowId: string,
+    versionId: string,
+    graph: WorkflowGraph,
+    userId: string,
+    input: Record<string, unknown> = {},
+  ) {
     // 1. Validate workflow
     const validation = validateWorkflowGraph(graph);
     if (!validation.success) {
@@ -55,8 +61,8 @@ export class WorkflowExecutor {
 
     try {
       const context: ExecutionContext = {
-        input: {},
-        outputs: {},
+        input,
+        outputs: { input },
         variables: {},
       };
 

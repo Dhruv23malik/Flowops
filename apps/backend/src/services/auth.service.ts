@@ -1,10 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/**
- * NOTE: This file uses `(db as any).user` casts because the Prisma client
- * was generated from the old schema (with `password` instead of `passwordHash`, no `name`).
- * After running `prisma migrate dev`, the generated client will include
- * the new fields and these casts can be removed.
- */
 import bcrypt from 'bcryptjs';
 import db from '../db';
 import { createToken } from '../utils/jwt';
@@ -24,7 +17,7 @@ export interface AuthResult {
   token: string;
 }
 
-function toSafeUser(user: any): SafeUser {
+function toSafeUser(user: { id: string; name: string | null; email: string; createdAt: Date; updatedAt: Date }): SafeUser {
   return {
     id: user.id,
     name: user.name ?? null,
@@ -46,15 +39,14 @@ export async function registerUser(
   email: string,
   password: string,
 ): Promise<AuthResult> {
-  // Check for existing user
-  const existing = await (db as any).user.findUnique({ where: { email } });
+  const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
     throw makeAppError('An account with this email already exists', 409, 'EMAIL_TAKEN');
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-  const user = await (db as any).user.create({
+  const user = await db.user.create({
     data: { name: name ?? null, email, passwordHash },
   });
 
@@ -63,7 +55,7 @@ export async function registerUser(
 }
 
 export async function loginUser(email: string, password: string): Promise<AuthResult> {
-  const user = await (db as any).user.findUnique({ where: { email } });
+  const user = await db.user.findUnique({ where: { email } });
 
   // Use constant-time compare even for missing user to prevent timing attacks
   const hash = user?.passwordHash ?? '$2a$12$invalidhashfortimingnomatch000000000000000000';
@@ -78,7 +70,44 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
 }
 
 export async function getUserById(userId: string): Promise<SafeUser | null> {
-  const user = await (db as any).user.findUnique({ where: { id: userId } });
+  const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) return null;
   return toSafeUser(user);
+}
+
+/**
+ * Upgrade a temporary guest user (`@flowops.local`) into a permanent account
+ * while preserving all workflows and execution history created during the session.
+ */
+export async function upgradeGuestUser(
+  userId: string,
+  name: string | undefined,
+  email: string,
+  password: string,
+): Promise<AuthResult> {
+  const current = await db.user.findUnique({ where: { id: userId } });
+  if (!current) {
+    throw makeAppError('User not found', 404, 'USER_NOT_FOUND');
+  }
+  if (!current.email.endsWith('@flowops.local')) {
+    throw makeAppError('Account is already registered', 400, 'ALREADY_REGISTERED');
+  }
+
+  const emailTaken = await db.user.findUnique({ where: { email } });
+  if (emailTaken && emailTaken.id !== userId) {
+    throw makeAppError('An account with this email already exists', 409, 'EMAIL_TAKEN');
+  }
+
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  const updated = await db.user.update({
+    where: { id: userId },
+    data: {
+      name: name ?? current.name,
+      email,
+      passwordHash,
+    },
+  });
+
+  const token = createToken(updated.id, updated.email);
+  return { user: toSafeUser(updated), token };
 }

@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import prisma from '../db';
 
 /**
@@ -39,13 +40,23 @@ export const DEMO_WORKFLOWS: DemoWorkflowTemplate[] = [
       'Analyzes incoming customer feedback with AI, routes urgent negative feedback for human follow-up, and saves the summary.',
     status: 'ACTIVE',
     nodes: [
-      { id: 'trigger', type: 'manual_trigger', position: { x: 80, y: 200 }, config: {} },
+      {
+        id: 'trigger',
+        type: 'manual_trigger',
+        position: { x: 80, y: 200 },
+        config: {
+          sampleInput: {
+            customer: 'Acme Corp',
+            feedback: 'Checkout has been failing with a 500 error for the past hour and customers cannot complete orders!',
+          },
+        },
+      },
       {
         id: 'analyze',
         type: 'ai_analyze',
         position: { x: 340, y: 200 },
         config: {
-          prompt: 'Summarize this customer feedback in one sentence and rate its urgency as low, medium or high.',
+          prompt: 'Analyze this customer feedback from {{input.customer}}: "{{input.feedback}}". Return JSON with keys "summary" (one sentence), "sentiment" (positive|neutral|negative), and "urgency" (low|medium|high).',
           outputKey: 'summary',
         },
       },
@@ -53,7 +64,7 @@ export const DEMO_WORKFLOWS: DemoWorkflowTemplate[] = [
         id: 'is-urgent',
         type: 'condition',
         position: { x: 600, y: 200 },
-        config: { field: 'priority', operator: '==', value: 'high' },
+        config: { field: 'summary.urgency', operator: '==', value: 'high' },
       },
       {
         id: 'save',
@@ -142,8 +153,8 @@ export async function seedDemoWorkflowsForUser(userId: string): Promise<void> {
         name: template.name,
         description: template.description,
         status: template.status,
-        nodes: template.nodes,
-        edges: template.edges,
+        nodes: template.nodes as unknown as Prisma.InputJsonValue,
+        edges: template.edges as unknown as Prisma.InputJsonValue,
         userId,
       },
     });
@@ -155,7 +166,7 @@ export async function seedDemoWorkflowsForUser(userId: string): Promise<void> {
         data: {
           workflowId: workflow.id,
           version: 1,
-          graph: { nodes: template.nodes, edges: template.edges },
+          graph: { nodes: template.nodes, edges: template.edges } as unknown as Prisma.InputJsonValue,
         },
       });
       const execution = await prisma.execution.create({

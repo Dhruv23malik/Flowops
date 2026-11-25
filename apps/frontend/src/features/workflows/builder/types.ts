@@ -4,7 +4,7 @@ import type { WorkflowNode, WorkflowEdge, NodeType } from '../../../services/wor
 // ─── Node Data Types ──────────────────────────────────────────────
 
 export interface ManualTriggerConfig {
-  [key: string]: never;
+  sampleInput?: Record<string, unknown>;
 }
 
 export interface AiAnalyzeConfig {
@@ -14,7 +14,7 @@ export interface AiAnalyzeConfig {
 
 export interface ConditionConfig {
   field: string;
-  operator: '==' | '!=' | '>' | '<' | '>=' | '<=';
+  operator: '==' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'not_contains';
   value: string | number | boolean;
 }
 

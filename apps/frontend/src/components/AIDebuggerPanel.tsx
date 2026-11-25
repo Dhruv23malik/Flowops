@@ -10,29 +10,27 @@ interface AIDebuggerPanelProps {
 
 export function AIDebuggerPanel({ executionId, onApplyFix, onClose }: AIDebuggerPanelProps) {
   const [diagnosis, setDiagnosis] = useState<AiDebugResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [didFetch, setDidFetch] = useState(false);
-
-  const fetchDiagnosis = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await apiDebugExecution(executionId);
-      setDiagnosis(res);
-      setDidFetch(true);
-    } catch (err: any) {
-      setError(err.message || 'Debugger unavailable. Please review the failed step manually.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   React.useEffect(() => {
-    if (!didFetch && !isLoading) {
-      fetchDiagnosis();
-    }
-  }, [executionId, didFetch, isLoading]);
+    let active = true;
+    apiDebugExecution(executionId)
+      .then((res) => {
+        if (active) setDiagnosis(res);
+      })
+      .catch((err: any) => {
+        if (active) {
+          setError(err.message || 'Debugger unavailable. Please review the failed step manually.');
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [executionId]);
 
   return (
     <div className="ai-debugger-panel" style={{

@@ -38,20 +38,28 @@ export class GeminiLlmClient implements LlmClient {
   }
 
   async generateText(systemPrompt: string, userMessage: string): Promise<string> {
-    const response = await this.client.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: userMessage,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.2,
-      },
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60_000); // 60s timeout
 
-    const text = response.text;
-    if (!text) {
-      throw new Error("LLM returned no text content");
+    try {
+      const response = await this.client.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: userMessage,
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: 0.2,
+          abortSignal: controller.signal,
+        },
+      });
+
+      const text = response.text;
+      if (!text) {
+        throw new Error("LLM returned no text content");
+      }
+      return text;
+    } finally {
+      clearTimeout(timeout);
     }
-    return text;
   }
 }
 

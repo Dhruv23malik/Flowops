@@ -1,35 +1,12 @@
 import {
-  createContext,
-  useContext,
   useEffect,
   useState,
   type ReactNode,
   useCallback,
 } from 'react';
-import { apiGetMe, apiLogin, apiLogout, apiRegister, apiGuestLogin, type User } from '../services/auth.api';
+import { apiGetMe, apiLogin, apiLogout, apiRegister, apiGuestLogin, apiUpgradeGuest, type User } from '../services/auth.api';
 import { socketService } from '../services/socket';
-
-// ─── Types ─────────────────────────────────────────────────────────
-
-type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
-
-interface AuthContextValue {
-  user: User | null;
-  status: AuthStatus;
-  isAuthenticated: boolean;
-  isGuest: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
-  loginAsGuest: () => Promise<void>;
-  logout: () => Promise<void>;
-}
-
-// ─── Context ────────────────────────────────────────────────────────
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-// ─── Provider ───────────────────────────────────────────────────────
+import { AuthContext, type AuthStatus } from './useAuth';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -64,6 +41,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     socketService.connect();
   }, []);
 
+  const upgradeGuest = useCallback(async (name: string, email: string, password: string) => {
+    const { user } = await apiUpgradeGuest(name, email, password);
+    setUser(user);
+    setStatus('authenticated');
+    socketService.connect();
+  }, []);
+
   const loginAsGuest = useCallback(async () => {
     const { user } = await apiGuestLogin();
     setUser(user);
@@ -92,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: status === 'loading',
         login,
         register,
+        upgradeGuest,
         loginAsGuest,
         logout,
       }}
@@ -99,12 +84,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-// ─── Hook ───────────────────────────────────────────────────────────
-
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
-  return ctx;
 }

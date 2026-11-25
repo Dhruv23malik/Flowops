@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.middleware';
-import { list, getOne, create, update, remove } from '../controllers/workflow.controller';
+import { list, getOne, create, update, remove, getWebhookInfo } from '../controllers/workflow.controller';
 import { runWorkflow } from '../controllers/execution.controller';
 
 const router = Router();
@@ -14,5 +14,6 @@ router.get('/:id', getOne);
 router.put('/:id', update);
 router.delete('/:id', remove);
 router.post('/:id/run', runWorkflow);
+router.get('/:id/webhook', getWebhookInfo);
 
 export default router;
