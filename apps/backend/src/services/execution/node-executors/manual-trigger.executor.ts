@@ -4,12 +4,23 @@ import { ExecutionContext, NodeExecutionResult } from '../execution.types';
 
 export class ManualTriggerExecutor implements NodeExecutor {
   async execute(
-    _node: WorkflowNode,
-    _context: ExecutionContext
+    node: WorkflowNode,
+    context: ExecutionContext
   ): Promise<NodeExecutionResult> {
+    const config = (node.config ?? {}) as { sampleInput?: Record<string, unknown> };
+    const hasRuntimeInput = context.input && Object.keys(context.input).length > 0;
+    const effectiveInput = hasRuntimeInput
+      ? context.input
+      : (config.sampleInput && typeof config.sampleInput === 'object' ? config.sampleInput : {});
+
     return {
       status: 'SUCCESS',
-      output: { triggered: true, timestamp: new Date().toISOString() },
+      output: {
+        ...effectiveInput,
+        input: effectiveInput,
+        triggered: true,
+        timestamp: new Date().toISOString(),
+      },
     };
   }
 }

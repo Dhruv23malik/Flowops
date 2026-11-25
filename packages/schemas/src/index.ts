@@ -15,7 +15,9 @@ export type NodeType = z.infer<typeof NodeType>;
 
 // ─── Per-Type Config Schemas ────────────────────────────────────
 
-export const ManualTriggerConfigSchema = z.object({});
+export const ManualTriggerConfigSchema = z.object({
+  sampleInput: z.record(z.any()).optional(),
+});
 
 export const AiAnalyzeConfigSchema = z.object({
   prompt: z.string().min(1, "Prompt is required"),
@@ -24,7 +26,7 @@ export const AiAnalyzeConfigSchema = z.object({
 
 export const ConditionConfigSchema = z.object({
   field: z.string().min(1, "Field is required"),
-  operator: z.enum([">", "<", ">=", "<=", "==", "!="]),
+  operator: z.enum([">", "<", ">=", "<=", "==", "!=", "contains", "not_contains"]),
   value: z.union([z.string(), z.number(), z.boolean()]),
 });
 
@@ -305,6 +307,11 @@ export const GenerateWorkflowRequestSchema = z.object({
   workflowId: z.string().optional(),
 });
 export type GenerateWorkflowRequest = z.infer<typeof GenerateWorkflowRequestSchema>;
+
+export const RunWorkflowRequestSchema = z.object({
+  input: z.record(z.any()).optional(),
+});
+export type RunWorkflowRequest = z.infer<typeof RunWorkflowRequestSchema>;
 
 // ─── Socket Event Types ─────────────────────────────────────────
 

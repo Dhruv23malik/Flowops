@@ -82,6 +82,17 @@ export async function apiGuestLogin(): Promise<AuthResponse> {
   });
 }
 
+export async function apiUpgradeGuest(
+  name: string,
+  email: string,
+  password: string,
+): Promise<AuthResponse> {
+  return apiRequest<AuthResponse>('/api/auth/upgrade-guest', {
+    method: 'POST',
+    body: JSON.stringify({ name, email, password }),
+  });
+}
+
 export async function apiLogout(): Promise<void> {
   await apiRequest<void>('/api/auth/logout', { method: 'POST' });
 }

@@ -41,6 +41,26 @@ export class ConditionExecutor implements NodeExecutor {
       case '<=':
         isTrue = Number(actualValue) <= Number(compareValue);
         break;
+      case 'contains': {
+        const needle = String(compareValue ?? '').toLowerCase();
+        if (Array.isArray(actualValue)) {
+          isTrue = actualValue.some(item => String(item).toLowerCase() === needle);
+        } else {
+          isTrue = actualValue !== undefined && actualValue !== null &&
+            String(actualValue).toLowerCase().includes(needle);
+        }
+        break;
+      }
+      case 'not_contains': {
+        const needle = String(compareValue ?? '').toLowerCase();
+        if (Array.isArray(actualValue)) {
+          isTrue = !actualValue.some(item => String(item).toLowerCase() === needle);
+        } else {
+          isTrue = actualValue === undefined || actualValue === null ||
+            !String(actualValue).toLowerCase().includes(needle);
+        }
+        break;
+      }
       default:
         return {
           status: 'FAILED',

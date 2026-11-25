@@ -4,10 +4,17 @@ import { verifyToken } from '../utils/jwt';
 
 let io: SocketIOServer;
 
-export const initSocket = (httpServer: HttpServer, allowedOrigins: string | string[]) => {
+export type CorsOriginOption = string | string[] | ((origin: string | undefined) => boolean);
+
+export const initSocket = (httpServer: HttpServer, originOption: CorsOriginOption) => {
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: allowedOrigins,
+      origin: typeof originOption === 'function'
+        ? (origin, callback) => {
+            if (originOption(origin)) return callback(null, true);
+            callback(new Error('Origin not allowed'));
+          }
+        : originOption,
       credentials: true,
     },
   });

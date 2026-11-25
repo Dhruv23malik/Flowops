@@ -1,11 +1,12 @@
 import { apiRequest } from './auth.api';
+import type { ExecutionStatus, StepStatus } from '@flowops/schemas';
 
 export interface ExecutionStep {
   id: string;
   executionId: string;
   nodeId: string;
   nodeType: string;
-  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'RETRYING' | 'SKIPPED';
+  status: StepStatus;
   startedAt: string | null;
   completedAt: string | null;
   error: string | null;
@@ -17,7 +18,7 @@ export interface Execution {
   id: string;
   workflowId: string;
   workflowVersionId: string;
-  status: 'QUEUED' | 'RUNNING' | 'SUCCESS' | 'FAILED';
+  status: ExecutionStatus;
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;
@@ -26,9 +27,13 @@ export interface Execution {
 }
 
 export const executionApi = {
-  async runWorkflow(workflowId: string): Promise<{ execution: Execution }> {
+  async runWorkflow(
+    workflowId: string,
+    input?: Record<string, unknown>,
+  ): Promise<{ execution: Execution }> {
     return apiRequest<{ execution: Execution }>(`/api/workflows/${workflowId}/run`, {
       method: 'POST',
+      body: JSON.stringify(input ? { input } : {}),
     });
   },
 

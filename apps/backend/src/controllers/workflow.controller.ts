@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
-import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { generateWebhookToken } from '../utils/webhook';
 import {
   listWorkflows,
   getWorkflow,
@@ -133,6 +133,32 @@ export async function remove(
   try {
     await deleteWorkflow(req.params.id, req.user!.userId);
     res.json({ success: true, data: { message: 'Workflow deleted successfully' } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getWebhookInfo(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const workflow = await getWorkflow(req.params.id, req.user!.userId);
+    const token = generateWebhookToken(workflow.id, req.user!.userId);
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3001';
+    const url = `${protocol}://${host}/api/webhooks/${workflow.id}`;
+
+    res.json({
+      success: true,
+      data: {
+        workflowId: workflow.id,
+        status: workflow.status,
+        url,
+        token,
+      },
+    });
   } catch (err) {
     next(err);
   }

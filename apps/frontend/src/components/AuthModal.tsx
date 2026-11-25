@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { ApiException } from '../services/auth.api';
 
 interface AuthModalProps {
@@ -9,7 +9,7 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose, defaultMode = 'register' }: AuthModalProps) {
-  const { login, register, logout, isGuest } = useAuth();
+  const { login, register, upgradeGuest, logout, isGuest } = useAuth();
   
   const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
   const [name, setName] = useState('');
@@ -26,15 +26,18 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'register' }: AuthMod
     setIsLoading(true);
 
     try {
-      if (isGuest) {
-        // Log out the guest before logging in / registering
-        await logout();
-      }
-
-      if (mode === 'login') {
-        await login(email, password);
+      if (mode === 'register' && isGuest) {
+        // Upgrade guest in-place so all their workflows and runs are preserved
+        await upgradeGuest(name, email, password);
       } else {
-        await register(name, email, password);
+        if (isGuest) {
+          await logout();
+        }
+        if (mode === 'login') {
+          await login(email, password);
+        } else {
+          await register(name, email, password);
+        }
       }
       onClose();
     } catch (err) {

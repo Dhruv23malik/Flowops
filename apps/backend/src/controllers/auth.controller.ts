@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { registerUser, loginUser, getUserById } from '../services/auth.service';
+import { registerUser, loginUser, getUserById, upgradeGuestUser } from '../services/auth.service';
 import { seedDemoWorkflowsForUser } from '../services/demo-templates';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -128,6 +128,34 @@ export async function me(
     }
     const isGuest = user.email.endsWith('@flowops.local');
     res.json({ success: true, data: { user: { ...user, isGuest } } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function upgradeGuest(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const parsed = RegisterSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: parsed.error.errors[0]?.message ?? 'Invalid input',
+        },
+      });
+      return;
+    }
+
+    const { name, email, password } = parsed.data;
+    const { user, token } = await upgradeGuestUser(req.user!.userId, name, email, password);
+
+    res.cookie('token', token, COOKIE_OPTIONS);
+    res.json({ success: true, data: { user: { ...user, isGuest: false } } });
   } catch (err) {
     next(err);
   }

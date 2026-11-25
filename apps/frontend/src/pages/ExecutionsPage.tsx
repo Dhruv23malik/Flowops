@@ -3,32 +3,37 @@ import { Link } from 'react-router-dom';
 import { executionApi, type Execution } from '../services/execution.api';
 import '../App.css';
 
+function formatDuration(start: string | null, end: string | null) {
+  if (!start || !end) return '-';
+  const duration = new Date(end).getTime() - new Date(start).getTime();
+  return (duration / 1000).toFixed(1) + 's';
+}
+
+function formatTimeAgo(dateStr: string, nowMs: number) {
+  const diff = nowMs - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
 export function ExecutionsPage() {
   const [executions, setExecutions] = useState<Execution[]>([]);
+  const [loadedAtMs, setLoadedAtMs] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     executionApi.listExecutions()
-      .then(res => setExecutions(res.executions))
+      .then(res => {
+        setExecutions(res.executions);
+        setLoadedAtMs(Date.now());
+      })
       .catch(err => setError(err.message))
       .finally(() => setIsLoading(false));
   }, []);
-
-  const formatDuration = (start: string | null, end: string | null) => {
-    if (!start || !end) return '-';
-    const duration = new Date(end).getTime() - new Date(start).getTime();
-    return (duration / 1000).toFixed(1) + 's';
-  };
-
-  const formatTimeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins} min ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-    return new Date(dateStr).toLocaleDateString();
-  };
 
   return (
     <>
@@ -77,7 +82,7 @@ export function ExecutionsPage() {
                       </span>
                     </td>
                     <td style={{ color: 'var(--text-secondary)' }}>{formatDuration(exec.startedAt, exec.completedAt)}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{formatTimeAgo(exec.createdAt)}</td>
+                    <td style={{ color: 'var(--text-secondary)' }}>{formatTimeAgo(exec.createdAt, loadedAtMs)}</td>
                   </tr>
                 ))}
               </tbody>

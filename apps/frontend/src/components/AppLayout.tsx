@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Outlet } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { AuthModal } from './AuthModal';
 
 // ─── Icons (inline SVG to avoid deps) ─────────────────────────────
@@ -93,19 +93,15 @@ export function AppLayout() {
             Executions
           </NavLink>
 
-          {!isGuest && (
-            <>
-              <span className="sidebar-label">Account</span>
+          <span className="sidebar-label">Account</span>
 
-              <NavLink
-                to="/app/settings"
-                className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-              >
-                <span className="sidebar-link-icon"><IconSettings /></span>
-                Settings
-              </NavLink>
-            </>
-          )}
+          <NavLink
+            to="/app/settings"
+            className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+          >
+            <span className="sidebar-link-icon"><IconSettings /></span>
+            Settings
+          </NavLink>
         </nav>
 
         <div className="sidebar-footer">

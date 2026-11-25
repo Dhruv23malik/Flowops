@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { apiListWorkflows, type WorkflowListItem } from '../services/workflow.api';
 import { executionApi } from '../services/execution.api';
 import { computeExecutionStats, formatDuration } from '../utils/execution-stats';

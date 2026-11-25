@@ -1,11 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/**
- * NOTE: This file uses `(db as any).workflow` casts because the Prisma client
- * was generated from the old schema (before the Phase 2 migration).
- * After running `prisma migrate dev`, the generated client will include
- * the new fields (name, passwordHash, status, nodes, edges, WorkflowStatus enum)
- * and these casts can be removed.
- */
 import db from '../db';
 
 export type WorkflowStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED';
@@ -53,7 +45,7 @@ function makeAppError(message: string, statusCode: number, code: string): Error 
   return err;
 }
 
-function toListItem(w: any): WorkflowListItem {
+function toListItem(w: { id: string; name: string; description: string | null; status: string; createdAt: Date; updatedAt: Date }): WorkflowListItem {
   return {
     id: w.id,
     name: w.name,
@@ -64,7 +56,7 @@ function toListItem(w: any): WorkflowListItem {
   };
 }
 
-function toDetail(w: any): WorkflowDetail {
+function toDetail(w: { id: string; name: string; description: string | null; status: string; nodes: unknown; edges: unknown; createdAt: Date; updatedAt: Date }): WorkflowDetail {
   return {
     id: w.id,
     name: w.name,
@@ -78,9 +70,10 @@ function toDetail(w: any): WorkflowDetail {
 }
 
 export async function listWorkflows(userId: string): Promise<WorkflowListItem[]> {
-  const workflows = await (db as any).workflow.findMany({
+  const workflows = await db.workflow.findMany({
     where: { userId },
     orderBy: { updatedAt: 'desc' },
+    take: 100,
     select: {
       id: true,
       name: true,
@@ -90,11 +83,11 @@ export async function listWorkflows(userId: string): Promise<WorkflowListItem[]>
       updatedAt: true,
     },
   });
-  return (workflows as any[]).map(toListItem);
+  return workflows.map(toListItem);
 }
 
 export async function getWorkflow(id: string, userId: string): Promise<WorkflowDetail> {
-  const workflow = await (db as any).workflow.findFirst({
+  const workflow = await db.workflow.findFirst({
     where: { id, userId },
   });
 
@@ -109,7 +102,7 @@ export async function createWorkflow(
   userId: string,
   data: CreateWorkflowData,
 ): Promise<WorkflowDetail> {
-  const workflow = await (db as any).workflow.create({
+  const workflow = await db.workflow.create({
     data: {
       userId,
       name: data.name,
@@ -127,13 +120,12 @@ export async function updateWorkflow(
   userId: string,
   data: UpdateWorkflowData,
 ): Promise<WorkflowDetail> {
-  // Verify ownership first
-  const existing = await (db as any).workflow.findFirst({ where: { id, userId } });
+  const existing = await db.workflow.findFirst({ where: { id, userId } });
   if (!existing) {
     throw makeAppError('Workflow not found', 404, 'WORKFLOW_NOT_FOUND');
   }
 
-  const workflow = await (db as any).workflow.update({
+  const workflow = await db.workflow.update({
     where: { id },
     data: {
       ...(data.name !== undefined && { name: data.name }),
@@ -147,10 +139,10 @@ export async function updateWorkflow(
 }
 
 export async function deleteWorkflow(id: string, userId: string): Promise<void> {
-  const existing = await (db as any).workflow.findFirst({ where: { id, userId } });
+  const existing = await db.workflow.findFirst({ where: { id, userId } });
   if (!existing) {
     throw makeAppError('Workflow not found', 404, 'WORKFLOW_NOT_FOUND');
   }
 
-  await (db as any).workflow.delete({ where: { id } });
+  await db.workflow.delete({ where: { id } });
 }

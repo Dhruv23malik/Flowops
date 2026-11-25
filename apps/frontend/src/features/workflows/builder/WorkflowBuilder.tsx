@@ -13,6 +13,8 @@ import {
 import {
   apiGetWorkflow,
   apiUpdateWorkflow,
+  apiGetWebhookInfo,
+  type WebhookInfo,
   type WorkflowDetail,
   type NodeType,
   type WorkflowStatus,
@@ -88,6 +90,16 @@ function WorkflowBuilderInner() {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [liveExecution, setLiveExecution] = useState<LiveExecutionState | null>(null);
 
+  // ─── Run-with-Input Modal State ────────────────────────────────
+  const [isRunModalOpen, setIsRunModalOpen] = useState(false);
+  const [runInputText, setRunInputText] = useState('{}');
+  const [runInputError, setRunInputError] = useState('');
+
+  // ─── Webhook Modal State ───────────────────────────────────────
+  const [webhookInfo, setWebhookInfo] = useState<WebhookInfo | null>(null);
+  const [isWebhookModalOpen, setIsWebhookModalOpen] = useState(false);
+  const [webhookCopied, setWebhookCopied] = useState(false);
+
   // ─── Derived ───────────────────────────────────────────────────
   const selectedNode = useMemo(
     () => (selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) ?? null : null),
@@ -102,9 +114,10 @@ function WorkflowBuilderInner() {
   // ─── Load Workflow ─────────────────────────────────────────────
   useEffect(() => {
     if (!id) return;
-    setIsLoading(true);
+    let active = true;
     apiGetWorkflow(id)
       .then((wf) => {
+        if (!active) return;
         setSavedWorkflow(wf);
         setWorkflowName(wf.name);
         setWorkflowStatus(wf.status);
@@ -113,31 +126,32 @@ function WorkflowBuilderInner() {
         setIsDirty(false);
       })
       .catch((err) => {
+        if (!active) return;
         if (err instanceof ApiException && err.status === 404) {
           setLoadError('Workflow not found.');
         } else {
           setLoadError('Failed to load workflow.');
         }
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [id, setNodes, setEdges]);
 
   // ─── Track Dirty State ─────────────────────────────────────────
-  // We mark dirty on any user interaction that changes the graph
   const markDirty = useCallback(() => {
     setIsDirty(true);
     setSaveError(null);
     setValidationErrors([]);
   }, []);
 
-  // Override onNodesChange to track dirty
   const handleNodesChange = useCallback(
     (changes: Parameters<typeof onNodesChange>[0]) => {
       onNodesChange(changes);
-      // Only mark dirty for meaningful changes (not selection)
-      const hasRealChange = changes.some(
-        (c) => c.type !== 'select'
-      );
+      const hasRealChange = changes.some((c) => c.type !== 'select');
       if (hasRealChange) markDirty();
     },
     [onNodesChange, markDirty],
@@ -146,9 +160,7 @@ function WorkflowBuilderInner() {
   const handleEdgesChange = useCallback(
     (changes: Parameters<typeof onEdgesChange>[0]) => {
       onEdgesChange(changes);
-      const hasRealChange = changes.some(
-        (c) => c.type !== 'select'
-      );
+      const hasRealChange = changes.some((c) => c.type !== 'select');
       if (hasRealChange) markDirty();
     },
     [onEdgesChange, markDirty],
@@ -182,7 +194,6 @@ function WorkflowBuilderInner() {
   // ─── Add Node ──────────────────────────────────────────────────
   const handleAddNode = useCallback(
     (type: NodeType, position?: { x: number; y: number }) => {
-      // Prevent multiple triggers
       if (type === 'manual_trigger' && hasTrigger) return;
 
       const nodeId = generateNodeId();
@@ -205,7 +216,6 @@ function WorkflowBuilderInner() {
     [nodes.length, hasTrigger, setNodes, markDirty],
   );
 
-  // ─── Select Node ──────────────────────────────────────────────
   const handleNodeClick = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
   }, []);
@@ -214,7 +224,6 @@ function WorkflowBuilderInner() {
     setSelectedNodeId(null);
   }, []);
 
-  // ─── Update Node Config ────────────────────────────────────────
   const handleUpdateConfig = useCallback(
     (nodeId: string, config: Record<string, unknown>) => {
       setNodes((nds) =>
@@ -232,7 +241,6 @@ function WorkflowBuilderInner() {
     [setNodes, markDirty],
   );
 
-  // ─── Delete Node ──────────────────────────────────────────────
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
       setNodes((nds) => nds.filter((n) => n.id !== nodeId));
@@ -243,7 +251,6 @@ function WorkflowBuilderInner() {
     [setNodes, setEdges, selectedNodeId, markDirty],
   );
 
-  // ─── Rename Workflow ──────────────────────────────────────────
   const handleNameChange = useCallback(
     (name: string) => {
       setWorkflowName(name);
@@ -252,11 +259,25 @@ function WorkflowBuilderInner() {
     [markDirty],
   );
 
+  const handleStatusChange = useCallback(
+    async (nextStatus: WorkflowStatus) => {
+      setWorkflowStatus(nextStatus);
+      if (!id) return;
+      try {
+        const updated = await apiUpdateWorkflow(id, { status: nextStatus });
+        setSavedWorkflow(updated);
+      } catch {
+        // Fallback: mark dirty so manual Save persists it
+        markDirty();
+      }
+    },
+    [id, markDirty],
+  );
+
   // ─── Save Workflow ─────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     if (!id || isSaving) return;
 
-    // Validate graph
     const validation = validateWorkflowGraph(nodes as FlowNode[], edges);
     if (!validation.success) {
       setValidationErrors(validation.errors);
@@ -274,6 +295,7 @@ function WorkflowBuilderInner() {
 
       const updated = await apiUpdateWorkflow(id, {
         name: workflowName,
+        status: workflowStatus,
         nodes: apiNodes,
         edges: apiEdges,
       });
@@ -290,12 +312,12 @@ function WorkflowBuilderInner() {
     } finally {
       setIsSaving(false);
     }
-  }, [id, isSaving, nodes, edges, workflowName]);
+  }, [id, isSaving, nodes, edges, workflowName, workflowStatus]);
 
   // ─── Apply AI Generated Workflow ───────────────────────────────
   const handleApplyAiWorkflow = useCallback((generated: GeneratedWorkflow) => {
     if (nodes.length > 0) {
-      const confirmMsg = "Applying the generated workflow will replace your current canvas.\n\nContinue?";
+      const confirmMsg = 'Applying the generated workflow will replace your current canvas.\n\nContinue?';
       if (!window.confirm(confirmMsg)) return;
     }
 
@@ -317,16 +339,17 @@ function WorkflowBuilderInner() {
           executionId: data.executionId,
           workflowId: data.workflowId,
           status: data.status,
-          steps: {}
+          steps: {},
         });
       }
     });
 
     const updateStep = (data: any) => {
-      setLiveExecution(prev => prev && prev.executionId === data.executionId ? {
-        ...prev,
-        steps: { ...prev.steps, [data.step.nodeId]: data.step }
-      } : prev);
+      setLiveExecution((prev) =>
+        prev && prev.executionId === data.executionId
+          ? { ...prev, steps: { ...prev.steps, [data.step.nodeId]: data.step } }
+          : prev,
+      );
     };
 
     socketService.on('execution:step_started', updateStep);
@@ -334,17 +357,15 @@ function WorkflowBuilderInner() {
     socketService.on('execution:step_failed', updateStep);
 
     socketService.on('execution:completed', (data: any) => {
-      setLiveExecution(prev => prev && prev.executionId === data.executionId ? {
-        ...prev,
-        status: data.status
-      } : prev);
+      setLiveExecution((prev) =>
+        prev && prev.executionId === data.executionId ? { ...prev, status: data.status } : prev,
+      );
     });
 
     socketService.on('execution:failed', (data: any) => {
-      setLiveExecution(prev => prev && prev.executionId === data.executionId ? {
-        ...prev,
-        status: data.status
-      } : prev);
+      setLiveExecution((prev) =>
+        prev && prev.executionId === data.executionId ? { ...prev, status: data.status } : prev,
+      );
     });
 
     return () => {
@@ -357,17 +378,47 @@ function WorkflowBuilderInner() {
     };
   }, [id]);
 
-  // ─── Run Workflow ──────────────────────────────────────────────
-  const handleRunWorkflow = useCallback(async () => {
-    if (!id || isRunning || isDirty || workflowStatus === 'DRAFT') return;
+  // ─── Run Workflow (Open Input Modal -> Execute) ────────────────
+  const handleOpenRunModal = useCallback(() => {
+    if (!id || isRunning || isDirty) return;
+    const triggerNode = nodes.find((n) => (n.data as FlowNodeData).nodeType === 'manual_trigger');
+    const sampleInput = (triggerNode?.data as FlowNodeData | undefined)?.config?.sampleInput;
+    setRunInputText(
+      sampleInput && typeof sampleInput === 'object'
+        ? JSON.stringify(sampleInput, null, 2)
+        : '{}',
+    );
+    setRunInputError('');
+    setIsRunModalOpen(true);
+  }, [id, isRunning, isDirty, nodes]);
+
+  const handleConfirmRun = useCallback(async () => {
+    if (!id || isRunning) return;
+
+    let parsedInput: Record<string, unknown> = {};
+    const trimmed = runInputText.trim();
+    if (trimmed) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          setRunInputError('Input must be a JSON object (e.g. {"feedback": "Great!"})');
+          return;
+        }
+        parsedInput = parsed;
+      } catch {
+        setRunInputError('Invalid JSON format.');
+        return;
+      }
+    }
+
+    setIsRunModalOpen(false);
     setIsRunning(true);
-    setLiveExecution(null); // Clear previous visual state
+    setLiveExecution(null);
     try {
-      const res = await executionApi.runWorkflow(id);
+      const res = await executionApi.runWorkflow(id, parsedInput);
       setLastExecution(res.execution);
       setIsResultModalOpen(true);
     } catch (err: any) {
-      // In case of an API/network error outside of execution bounds
       const fallbackExec = {
         id: 'error',
         workflowId: id,
@@ -376,25 +427,40 @@ function WorkflowBuilderInner() {
         startedAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
-        steps: [{
-          id: '1',
-          executionId: 'error',
-          nodeId: 'unknown',
-          nodeType: 'system',
-          status: 'FAILED',
-          startedAt: null,
-          completedAt: null,
-          error: err.message || 'Execution request failed',
-          output: null,
-          createdAt: new Date().toISOString()
-        }]
+        steps: [
+          {
+            id: '1',
+            executionId: 'error',
+            nodeId: 'unknown',
+            nodeType: 'system',
+            status: 'FAILED',
+            startedAt: null,
+            completedAt: null,
+            error: err.message || 'Execution request failed',
+            output: null,
+            createdAt: new Date().toISOString(),
+          },
+        ],
       } as Execution;
       setLastExecution(fallbackExec);
       setIsResultModalOpen(true);
     } finally {
       setIsRunning(false);
     }
-  }, [id, isRunning, isDirty, workflowStatus]);
+  }, [id, isRunning, runInputText]);
+
+  // ─── Webhook Modal ─────────────────────────────────────────────
+  const handleOpenWebhook = useCallback(async () => {
+    if (!id) return;
+    setIsWebhookModalOpen(true);
+    setWebhookCopied(false);
+    try {
+      const info = await apiGetWebhookInfo(id);
+      setWebhookInfo(info);
+    } catch {
+      setWebhookInfo(null);
+    }
+  }, [id]);
 
   // ─── Loading State ─────────────────────────────────────────────
   if (isLoading) {
@@ -422,6 +488,10 @@ function WorkflowBuilderInner() {
     );
   }
 
+  const curlSnippet = webhookInfo
+    ? `curl -X POST "${webhookInfo.url}" \\\n  -H "Content-Type: application/json" \\\n  -H "x-flowops-webhook-token: ${webhookInfo.token}" \\\n  -d '{"message": "Hello from webhook"}'`
+    : '';
+
   return (
     <div className="workflow-builder" id="workflow-builder">
       <WorkflowToolbar
@@ -432,9 +502,11 @@ function WorkflowBuilderInner() {
         saveError={saveError}
         onSave={handleSave}
         onNameChange={handleNameChange}
+        onStatusChange={handleStatusChange}
         onBack={() => navigate('/app/workflows')}
         onGenerateAI={() => setIsAiPanelOpen(true)}
-        onRun={handleRunWorkflow}
+        onOpenWebhook={() => void handleOpenWebhook()}
+        onRun={handleOpenRunModal}
         isRunning={isRunning}
       />
 
@@ -459,7 +531,7 @@ function WorkflowBuilderInner() {
             data: {
               ...n.data,
               executionStatus: liveExecution?.steps[n.id]?.status,
-            }
+            },
           }))}
           edges={edges}
           onNodesChange={handleNodesChange as OnNodesChange}
@@ -477,7 +549,7 @@ function WorkflowBuilderInner() {
           onDeleteNode={handleDeleteNode}
           onClose={() => setSelectedNodeId(null)}
         />
-        
+
         {liveExecution && (
           <div className="execution-panel">
             <div className="execution-panel-header">
@@ -485,28 +557,119 @@ function WorkflowBuilderInner() {
               <span className={`status-text ${liveExecution.status.toLowerCase()}`}>{liveExecution.status}</span>
             </div>
             <div className="execution-panel-steps">
-              {nodes.map(node => {
+              {nodes.map((node) => {
                 const step = liveExecution.steps[node.id];
-                if (!step) return (
-                   <div key={node.id} className="execution-step pending">
-                     ○ {(node.data as any).label}
-                   </div>
-                );
+                if (!step) {
+                  return (
+                    <div key={node.id} className="execution-step pending">
+                      ○ {(node.data as any).label}
+                    </div>
+                  );
+                }
                 return (
-                   <div key={node.id} className={`execution-step ${step.status.toLowerCase()}`}>
-                     {step.status === 'SUCCESS' && '✓ '}
-                     {step.status === 'RUNNING' && '⟳ '}
-                     {step.status === 'FAILED' && '✕ '}
-                     {step.status === 'SKIPPED' && '○ '}
-                     {(node.data as any).label}
-                     {step.duration !== undefined && <span className="duration">{step.duration}ms</span>}
-                   </div>
+                  <div key={node.id} className={`execution-step ${step.status.toLowerCase()}`}>
+                    {step.status === 'SUCCESS' && '✓ '}
+                    {step.status === 'RUNNING' && '⟳ '}
+                    {step.status === 'FAILED' && '✕ '}
+                    {step.status === 'SKIPPED' && '○ '}
+                    {(node.data as any).label}
+                    {step.duration !== undefined && <span className="duration">{step.duration}ms</span>}
+                  </div>
                 );
               })}
             </div>
           </div>
         )}
       </div>
+
+      {/* Run Input Modal */}
+      {isRunModalOpen && (
+        <div className="ai-modal-overlay">
+          <div className="ai-modal" style={{ maxWidth: 500 }}>
+            <div className="ai-modal__header">
+              <h3 className="ai-modal__title">▶ Run Workflow</h3>
+              <button className="ai-modal__close" onClick={() => setIsRunModalOpen(false)}>&times;</button>
+            </div>
+            <div className="ai-modal__body">
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: 10 }}>
+                Provide JSON input passed to the trigger (accessible via <code>{'{{input.key}}'}</code>).
+              </p>
+              <textarea
+                className="form-input form-textarea"
+                rows={6}
+                value={runInputText}
+                onChange={(e) => setRunInputText(e.target.value)}
+                id="run-input-json"
+              />
+              {runInputError && (
+                <div className="ai-modal__error" style={{ marginTop: 10 }}>{runInputError}</div>
+              )}
+              <div className="ai-modal__actions" style={{ justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+                <button className="btn btn-secondary" onClick={() => setIsRunModalOpen(false)}>
+                  Cancel
+                </button>
+                <button className="btn btn-primary" onClick={() => void handleConfirmRun()} id="confirm-run-btn">
+                  ▶ Run Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Webhook Info Modal */}
+      {isWebhookModalOpen && (
+        <div className="ai-modal-overlay">
+          <div className="ai-modal" style={{ maxWidth: 580 }}>
+            <div className="ai-modal__header">
+              <h3 className="ai-modal__title">🔗 Webhook Trigger</h3>
+              <button className="ai-modal__close" onClick={() => setIsWebhookModalOpen(false)}>&times;</button>
+            </div>
+            <div className="ai-modal__body">
+              {workflowStatus !== 'ACTIVE' && (
+                <div className="ai-modal__error" style={{ marginBottom: 12 }}>
+                  This workflow is currently <strong>{workflowStatus}</strong>. Switch status to <strong>Active</strong> in the toolbar before calling the webhook externally.
+                </div>
+              )}
+              {webhookInfo ? (
+                <>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: 10 }}>
+                    Trigger this workflow from any app, GitHub action, or script using a POST request:
+                  </p>
+                  <pre
+                    style={{
+                      padding: 12,
+                      background: 'var(--bg-base)',
+                      borderRadius: 6,
+                      fontSize: '0.78rem',
+                      overflowX: 'auto',
+                      marginBottom: 12,
+                    }}
+                  >
+                    {curlSnippet}
+                  </pre>
+                  <div className="ai-modal__actions" style={{ justifyContent: 'space-between' }}>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(curlSnippet);
+                        setWebhookCopied(true);
+                      }}
+                    >
+                      {webhookCopied ? '✓ Copied cURL' : 'Copy cURL'}
+                    </button>
+                    <button className="btn btn-primary btn-sm" onClick={() => setIsWebhookModalOpen(false)}>
+                      Done
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p style={{ color: 'var(--text-secondary)' }}>Loading webhook details…</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <AIGenerationPanel
         workflowId={id}
@@ -531,13 +694,11 @@ function WorkflowBuilderInner() {
           onClose={() => setIsDebuggerOpen(false)}
           onApplyFix={(fix) => {
             if (fix.type === 'update_node_config') {
-              const node = nodes.find(n => n.id === fix.nodeId);
+              const node = nodes.find((n) => n.id === fix.nodeId);
               if (node) {
-                // Merge current config with AI suggested changes
                 const newConfig = { ...((node.data as any).config || {}), ...fix.changes };
                 handleUpdateConfig(fix.nodeId, newConfig);
                 setIsDebuggerOpen(false);
-                // Notification or just close is fine
               }
             }
           }}

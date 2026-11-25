@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import '../App.css';
 
 export function SettingsPage() {
-  const { user, isGuest, logout, register } = useAuth();
+  const { user, isGuest, logout, upgradeGuest } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +18,7 @@ export function SettingsPage() {
     }
     setIsSaving(true);
     try {
-      await register(name.trim(), email.trim(), password);
+      await upgradeGuest(name.trim(), email.trim(), password);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Could not create the account. Please try again.');
     } finally {

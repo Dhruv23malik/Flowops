@@ -1,21 +1,22 @@
 import { Outlet } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/useAuth';
+import { useEffect, useRef, useState } from 'react';
 
 export function ProtectedRoute() {
   const { isAuthenticated, isLoading, loginAsGuest } = useAuth();
-  const [isInitializingGuest, setIsInitializingGuest] = useState(false);
   const [guestLoginFailed, setGuestLoginFailed] = useState(false);
+  const startedGuestRef = useRef(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && !isInitializingGuest && !guestLoginFailed) {
-      setIsInitializingGuest(true);
+    if (!isLoading && !isAuthenticated && !guestLoginFailed && !startedGuestRef.current) {
+      startedGuestRef.current = true;
       loginAsGuest().catch(() => {
-        setIsInitializingGuest(false);
         setGuestLoginFailed(true);
       });
     }
-  }, [isLoading, isAuthenticated, isInitializingGuest, guestLoginFailed, loginAsGuest]);
+  }, [isLoading, isAuthenticated, guestLoginFailed, loginAsGuest]);
+
+  const isInitializingGuest = !isLoading && !isAuthenticated && !guestLoginFailed;
 
   if (isLoading || isInitializingGuest) {
     return (

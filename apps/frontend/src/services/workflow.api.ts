@@ -1,28 +1,16 @@
 import { ApiException } from './auth.api';
+import type {
+  WorkflowStatus,
+  NodeType,
+  WorkflowNode,
+  WorkflowEdge,
+} from '@flowops/schemas';
 
-// ─── Types ────────────────────────────────────────────────────────
-
-export type WorkflowStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED';
-export type NodeType = 'manual_trigger' | 'ai_analyze' | 'condition' | 'save_result' | 'http_request' | 'delay' | 'set_variable';
+export type { WorkflowStatus, NodeType, WorkflowNode, WorkflowEdge };
 
 export interface WorkflowNodePosition {
   x: number;
   y: number;
-}
-
-export interface WorkflowNode {
-  id: string;
-  type: NodeType;
-  position: WorkflowNodePosition;
-  config: Record<string, unknown>;
-}
-
-export interface WorkflowEdge {
-  id: string;
-  source: string;
-  target: string;
-  sourceHandle?: string;
-  targetHandle?: string;
 }
 
 export interface WorkflowListItem {
@@ -103,6 +91,17 @@ export async function apiUpdateWorkflow(id: string, data: UpdateWorkflowData): P
 
 export async function apiDeleteWorkflow(id: string): Promise<void> {
   await workflowRequest<void>(`/api/workflows/${id}`, { method: 'DELETE' });
+}
+
+export interface WebhookInfo {
+  workflowId: string;
+  status: WorkflowStatus;
+  url: string;
+  token: string;
+}
+
+export async function apiGetWebhookInfo(id: string): Promise<WebhookInfo> {
+  return workflowRequest<WebhookInfo>(`/api/workflows/${id}/webhook`);
 }
 
 export { ApiException };
