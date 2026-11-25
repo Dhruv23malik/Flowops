@@ -8,6 +8,7 @@ build/
 # Environment files (per-app, never commit real secrets)
 .env
 .env.local
+.env.neon
 
 # Database
 *.db
